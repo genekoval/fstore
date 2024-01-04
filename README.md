@@ -1,0 +1,3 @@
+# FStore
+
+Simple object storage.
