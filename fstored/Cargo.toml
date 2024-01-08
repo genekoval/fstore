@@ -1,0 +1,17 @@
+[package]
+name = "fstored"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+fstore = { path = "../fstore" }
+sql-helper-macros = { path = "../sql-helper-macros" }
+sqlx = { version = "0.7", features = [
+    "macros",
+    "postgres",
+    "runtime-tokio",
+    "time",
+    "uuid",
+] }
+time = { workspace = true }
+uuid = { workspace = true }
