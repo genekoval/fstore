@@ -1,11 +1,10 @@
-use std::time::SystemTime;
-
+use time::Date;
 use uuid::Uuid;
 
 pub struct Bucket {
     pub id: Uuid,
     pub name: String,
-    pub created: SystemTime,
+    pub created: Date,
     pub size: i64,
     pub space_used: i64,
 }
@@ -13,20 +12,30 @@ pub struct Bucket {
 pub struct Object {
     pub id: Uuid,
     pub hash: String,
-    pub size: i64,
-    pub ty: String,
+    pub size: u64,
+    pub r#type: String,
     pub subtype: String,
-    pub added: SystemTime,
+    pub added: Date,
 }
 
 impl Object {
     pub fn media_type(&self) -> String {
-        format!("{}/{}", self.ty, self.subtype)
+        format!("{}/{}", self.r#type, self.subtype)
     }
 }
 
+pub struct ObjectError {
+    pub object_id: Uuid,
+    pub message: String,
+}
+
+pub struct RemoveResult {
+    pub objects_removed: u64,
+    pub space_freed: u64,
+}
+
 pub struct StoreTotals {
-    pub buckets: i64,
-    pub objects: i64,
-    pub space_used: i64,
+    pub buckets: u64,
+    pub objects: u64,
+    pub space_used: u64,
 }

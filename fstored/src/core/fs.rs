@@ -8,7 +8,8 @@ use lock::FileLock;
 use anyhow::{bail, Result};
 use log::{debug, error};
 use std::{
-    fs, io,
+    fs,
+    io::{self, ErrorKind},
     os::{fd::AsRawFd, unix::fs::PermissionsExt},
     path::{Path, PathBuf},
 };
@@ -41,12 +42,13 @@ fn path_for_id(parent: &Path, id: &Uuid) -> PathBuf {
     result
 }
 
-pub fn remove(path: PathBuf) {
+fn remove(path: PathBuf) {
     match fs::remove_file(&path) {
         Ok(()) => debug!("Removed file '{}'", path.display()),
-        Err(err) => {
-            error!("Failed to remove file '{}': {}", path.display(), err)
-        }
+        Err(err) => match err.kind() {
+            ErrorKind::NotFound => (),
+            _ => error!("Failed to remove file '{}': {}", path.display(), err),
+        },
     };
 }
 
@@ -97,6 +99,25 @@ impl Filesystem {
         Filesystem { objects, parts }
     }
 
+    pub async fn check(
+        &self,
+        object_id: &Uuid,
+        hash: &str,
+    ) -> core::result::Result<(), String> {
+        let path = self.object_path(object_id);
+
+        match hash::sha256sum(&path).await {
+            Ok(result) => {
+                if result == hash {
+                    Ok(())
+                } else {
+                    Err(format!("hash mismatch: {result}"))
+                }
+            }
+            Err(err) => Err(err.to_string()),
+        }
+    }
+
     pub async fn commit(&self, part_id: Uuid) -> Result<Object> {
         let part = self.part_path(&part_id);
         let object = self.object_path(&part_id);
@@ -127,7 +148,7 @@ impl Filesystem {
         path_for_id(&self.objects, id)
     }
 
-    pub async fn part(&self, id: Uuid) -> io::Result<Part> {
+    pub async fn part(&self, id: &Uuid) -> io::Result<Part> {
         let path = self.part_path(&id);
         let file = OpenOptions::new()
             .create(true)
@@ -138,7 +159,7 @@ impl Filesystem {
         let lock = lock::exclusive(file.as_raw_fd())?;
 
         Ok(Part {
-            id,
+            id: id.clone(),
             file,
             path,
             lock,
@@ -147,5 +168,9 @@ impl Filesystem {
 
     fn part_path(&self, id: &Uuid) -> PathBuf {
         path_for_id(&self.parts, id)
+    }
+
+    pub fn remove_object(&self, id: &Uuid) {
+        remove(self.object_path(id));
     }
 }

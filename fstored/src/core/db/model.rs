@@ -13,6 +13,18 @@ pub struct Bucket {
     pub space_used: i64,
 }
 
+impl Into<fstore::Bucket> for Bucket {
+    fn into(self) -> fstore::Bucket {
+        fstore::Bucket {
+            id: self.bucket_id,
+            name: self.name,
+            created: self.date_created,
+            size: self.size,
+            space_used: self.space_used,
+        }
+    }
+}
+
 #[derive(sqlx::FromRow)]
 pub struct Object {
     pub object_id: Uuid,
@@ -23,10 +35,32 @@ pub struct Object {
     pub date_added: Date,
 }
 
+impl Into<fstore::Object> for Object {
+    fn into(self) -> fstore::Object {
+        fstore::Object {
+            id: self.object_id,
+            hash: self.hash,
+            size: self.size.try_into().unwrap(),
+            r#type: self.r#type,
+            subtype: self.subtype,
+            added: self.date_added,
+        }
+    }
+}
+
 #[derive(sqlx::FromRow)]
 pub struct RemoveResult {
     pub objects_removed: i64,
     pub space_freed: i64,
+}
+
+impl Into<fstore::RemoveResult> for RemoveResult {
+    fn into(self) -> fstore::RemoveResult {
+        fstore::RemoveResult {
+            objects_removed: self.objects_removed.try_into().unwrap(),
+            space_freed: self.space_freed.try_into().unwrap(),
+        }
+    }
 }
 
 #[derive(sqlx::FromRow)]
@@ -36,10 +70,29 @@ pub struct StoreTotals {
     pub space_used: i64,
 }
 
+impl Into<fstore::StoreTotals> for StoreTotals {
+    fn into(self) -> fstore::StoreTotals {
+        fstore::StoreTotals {
+            buckets: self.buckets.try_into().unwrap(),
+            objects: self.objects.try_into().unwrap(),
+            space_used: self.space_used.try_into().unwrap(),
+        }
+    }
+}
+
 #[derive(sqlx::FromRow)]
 pub struct ObjectError {
     pub object_id: Uuid,
     pub message: String,
+}
+
+impl Into<fstore::ObjectError> for ObjectError {
+    fn into(self) -> fstore::ObjectError {
+        fstore::ObjectError {
+            object_id: self.object_id,
+            message: self.message,
+        }
+    }
 }
 
 impl sqlx::Type<Postgres> for ObjectError {

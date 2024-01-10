@@ -21,7 +21,7 @@ sqlx = { version = "0.7", features = [
 ] }
 thiserror = "1"
 time = { workspace = true }
-uuid = { workspace = true }
+uuid = { workspace = true, features = ["v4"] }
 
 [dependencies.tokio]
 version = "1"
