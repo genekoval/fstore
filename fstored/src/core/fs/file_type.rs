@@ -1,32 +1,34 @@
 use anyhow::{bail, Context, Result};
 use log::{debug, error};
-use magic::cookie::{Cookie, Flags, Load};
+use magic::cookie::{Flags, Load};
 use std::path::Path;
 
+type Cookie = magic::Cookie<Load>;
+
 thread_local! {
-    static COOKIE: Option<Cookie<Load>> = load_cookie();
+    static COOKIE: Option<Cookie> = load_cookie(Flags::MIME_TYPE);
 }
 
-fn load_cookie() -> Option<Cookie<Load>> {
-    let cookie = match Cookie::open(Flags::MIME_TYPE) {
+fn load_cookie(flags: Flags) -> Option<Cookie> {
+    let cookie = match magic::Cookie::open(flags) {
         Ok(cookie) => match cookie.load(&Default::default()) {
             Ok(cookie) => Some(cookie),
             Err(err) => {
                 error!("Failed to load default magic database file: {}", err);
-                None
+                return None;
             }
         },
         Err(err) => {
             error!("Failed to open magic cookie: {}", err);
-            None
+            return None;
         }
     }?;
 
-    debug!("Loaded magic cookie");
+    debug!("Loaded magic cookie with flags: {flags}");
     Some(cookie)
 }
 
-fn read_mime_type(cookie: &Cookie<Load>, path: &Path) -> Result<MimeType> {
+fn read_mime_type(cookie: &Cookie, path: &Path) -> Result<MimeType> {
     let description = cookie.file(path).with_context(|| {
         format!(
             "Failed to read textual description of contents of '{}'",
