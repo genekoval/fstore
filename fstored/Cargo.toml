@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anyhow = "1"
 base16ct = "0.2"
 fstore = { path = "../fstore" }
 libc = "0.2"

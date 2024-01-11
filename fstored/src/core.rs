@@ -4,7 +4,8 @@ mod fs;
 pub use db::Database;
 pub use fs::{Filesystem, Part};
 
-use anyhow::Result;
+use crate::error::Result;
+
 use fstore::{Bucket, Object, ObjectError, RemoveResult, StoreTotals};
 use log::info;
 use uuid::Uuid;
@@ -39,7 +40,7 @@ impl ObjectStore {
                 bucket_id,
                 &metadata.id,
                 metadata.hash.as_str(),
-                metadata.size.try_into()?,
+                metadata.size.try_into().unwrap(),
                 metadata.r#type.as_str(),
                 metadata.subtype.as_str(),
             )

@@ -5,7 +5,8 @@ mod lock;
 use file_type::{mime_type, MimeType};
 use lock::FileLock;
 
-use anyhow::{bail, Result};
+use crate::error::{internal, Error, Result};
+
 use log::{debug, error};
 use std::{
     fs,
@@ -74,7 +75,7 @@ impl Part {
         while written < data.len() {
             written += match self.file.write(&data[written..]).await {
                 Ok(bytes) => bytes,
-                Err(err) => bail!(
+                Err(err) => internal!(
                     "Failed to write data to part file '{}': {}",
                     self.id,
                     err
@@ -119,18 +120,14 @@ impl Filesystem {
     }
 
     pub async fn commit(&self, part_id: Uuid) -> Result<Object> {
-        let part = self.part_path(&part_id);
-        let object = self.object_path(&part_id);
+        let object = self.move_part(&part_id)?;
 
-        let parent = object
-            .parent()
-            .expect("Object files should have a parent directory");
-
-        fs::create_dir_all(parent)?;
-        fs::rename(&part, &object)?;
-        drop(part);
-
-        let metadata = object.metadata()?;
+        let metadata = object.metadata().map_err(|err| {
+            Error::Internal(format!(
+                "Failed to fetch metadata for object file '{}': {err}",
+                object.display()
+            ))
+        })?;
         metadata.permissions().set_mode(OBJECT_PERMISSIONS);
 
         let MimeType { r#type, subtype } = mime_type(&object)?;
@@ -144,22 +141,66 @@ impl Filesystem {
         })
     }
 
+    fn create_directories(&self, file: &Path) -> Result<()> {
+        let parent = file.parent().ok_or_else(|| {
+            Error::Internal(format!(
+                "No parent directory for file '{}'",
+                file.display()
+            ))
+        })?;
+
+        fs::create_dir_all(parent).map_err(|err| {
+            Error::Internal(format!(
+                "Failed to create parent directories \
+                for file '{}': {err}",
+                parent.display()
+            ))
+        })?;
+
+        Ok(())
+    }
+
+    fn move_part(&self, part_id: &Uuid) -> Result<PathBuf> {
+        let part = self.part_path(part_id);
+        let object = self.object_path(part_id);
+
+        self.create_directories(&object)?;
+        fs::rename(&part, &object).map_err(|err| {
+            Error::Internal(format!(
+                "Failed to move part file to objects directory \
+                ({} -> {}): {err}",
+                &part.display(),
+                &object.display()
+            ))
+        })?;
+
+        Ok(object)
+    }
+
     fn object_path(&self, id: &Uuid) -> PathBuf {
         path_for_id(&self.objects, id)
     }
 
-    pub async fn part(&self, id: &Uuid) -> io::Result<Part> {
-        let path = self.part_path(&id);
+    pub async fn part(&self, id: &Uuid) -> Result<Part> {
+        let path = self.part_path(id);
+
+        self.create_directories(&path)?;
         let file = OpenOptions::new()
             .create(true)
             .append(true)
             .open(&path)
-            .await?;
+            .await
+            .map_err(|err| {
+                Error::Internal(format!(
+                    "Failed to open part file '{}': {err}",
+                    path.display()
+                ))
+            })?;
 
         let lock = lock::exclusive(file.as_raw_fd())?;
 
         Ok(Part {
-            id: id.clone(),
+            id: *id,
             file,
             path,
             lock,

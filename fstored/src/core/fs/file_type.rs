@@ -1,4 +1,5 @@
-use anyhow::{bail, Context, Result};
+use crate::error::{internal, Result};
+
 use log::{debug, error};
 use magic::cookie::{Flags, Load};
 use std::path::Path;
@@ -28,18 +29,35 @@ fn load_cookie(flags: Flags) -> Option<Cookie> {
     Some(cookie)
 }
 
+fn with_cookie<F, R>(f: F) -> Result<R>
+where
+    F: FnOnce(&Cookie) -> Result<R>,
+{
+    COOKIE.with(|cookie| match cookie {
+        Some(ref cookie) => f(cookie),
+        None => internal!("Magic cookie is missing"),
+    })
+}
+
+pub struct MimeType {
+    pub r#type: String,
+    pub subtype: String,
+}
+
 fn read_mime_type(cookie: &Cookie, path: &Path) -> Result<MimeType> {
-    let description = cookie.file(path).with_context(|| {
-        format!(
-            "Failed to read textual description of contents of '{}'",
-            path.display()
-        )
-    })?;
+    let description = match cookie.file(path) {
+        Ok(description) => description,
+        Err(err) => internal!(
+            "Failed to read textual description of contents of '{}': {}",
+            path.display(),
+            err
+        ),
+    };
 
     let read = |part: &str, value: Option<&str>| -> Result<String> {
         match value {
             Some(value) => Ok(value.to_string()),
-            None => bail!(
+            None => internal!(
                 "Failed to read mime type of '{}': \
                 Magic description '{}' does not contain {}",
                 path.display(),
@@ -57,14 +75,6 @@ fn read_mime_type(cookie: &Cookie, path: &Path) -> Result<MimeType> {
     Ok(MimeType { r#type, subtype })
 }
 
-pub struct MimeType {
-    pub r#type: String,
-    pub subtype: String,
-}
-
 pub fn mime_type(path: &Path) -> Result<MimeType> {
-    COOKIE.with(|cookie| match cookie {
-        Some(ref cookie) => read_mime_type(cookie, path),
-        None => bail!("Magic cookie is missing"),
-    })
+    with_cookie(|cookie| read_mime_type(cookie, path))
 }
