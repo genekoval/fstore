@@ -3,5 +3,7 @@ resolver = "2"
 members = ["fstore", "fstore-core", "fstored", "sql-helper-macros"]
 
 [workspace.dependencies]
+serde = "1"
 time = "0.3"
+thiserror = "1"
 uuid = "1"

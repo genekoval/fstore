@@ -1,7 +1,7 @@
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("SQL Error")]
-    SqlError(#[from] sqlx::Error),
+    Sql(#[from] sqlx::Error),
 
     #[error("This object is being written to by another request")]
     WriteLock,
