@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["fstore", "fstored", "sql-helper-macros"]
+members = ["fstore", "fstore-core", "fstored", "sql-helper-macros"]
 
 [workspace.dependencies]
 time = "0.3"

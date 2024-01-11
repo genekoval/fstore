@@ -325,7 +325,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "fstored"
+name = "fstore-core"
 version = "0.1.0"
 dependencies = [
  "base16ct",
@@ -340,6 +340,13 @@ dependencies = [
  "time",
  "tokio",
  "uuid",
+]
+
+[[package]]
+name = "fstored"
+version = "0.1.0"
+dependencies = [
+ "fstore-core",
 ]
 
 [[package]]

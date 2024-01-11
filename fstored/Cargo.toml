@@ -4,24 +4,4 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-base16ct = "0.2"
-fstore = { path = "../fstore" }
-libc = "0.2"
-log = "0.4"
-magic = "0.16"
-sha2 = "0.10"
-sql-helper-macros = { path = "../sql-helper-macros" }
-sqlx = { version = "0.7", features = [
-    "macros",
-    "postgres",
-    "runtime-tokio",
-    "time",
-    "uuid",
-] }
-thiserror = "1"
-time = { workspace = true }
-uuid = { workspace = true, features = ["v4"] }
-
-[dependencies.tokio]
-version = "1"
-features = ["fs", "rt-multi-thread"]
+fstore-core = { path = "../fstore-core" }

@@ -1,4 +1,5 @@
 mod db;
+mod error;
 mod fs;
 
 pub use db::Database;
