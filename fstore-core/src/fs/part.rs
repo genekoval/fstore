@@ -48,16 +48,14 @@ impl PartLockSet {
 }
 
 pub struct Part {
-    id: Uuid,
     path: PathBuf,
     file: tokio::fs::File,
-    internal_lock: PartLock,
-    external_lock: FileLock,
+    _internal_lock: PartLock,
+    _external_lock: FileLock,
 }
 
 impl Part {
     pub fn new(
-        id: &Uuid,
         path: PathBuf,
         file: tokio::fs::File,
         lock: PartLock,
@@ -65,24 +63,22 @@ impl Part {
         let external_lock = lock::exclusive(file.as_raw_fd())?;
 
         Ok(Part {
-            id: *id,
             path,
             file,
-            internal_lock: lock,
-            external_lock,
+            _internal_lock: lock,
+            _external_lock: external_lock,
         })
     }
 
-    async fn write(&mut self, data: &[u8]) -> Result<()> {
+    pub async fn write(&mut self, data: &[u8]) -> Result<()> {
         let mut written = 0;
 
         while written < data.len() {
             written += match self.file.write(&data[written..]).await {
                 Ok(bytes) => bytes,
                 Err(err) => internal!(
-                    "Failed to write data to part file '{}': {}",
-                    self.id,
-                    err
+                    "Failed to write data to part file '{}': {err}",
+                    self.path.display()
                 ),
             }
         }

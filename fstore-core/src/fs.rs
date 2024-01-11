@@ -180,7 +180,7 @@ impl Filesystem {
                 ))
             })?;
 
-        Part::new(id, path, file, lock)
+        Part::new(path, file, lock)
     }
 
     fn part_path(&self, id: &Uuid) -> PathBuf {
