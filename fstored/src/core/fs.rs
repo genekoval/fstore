@@ -1,20 +1,22 @@
 mod file_type;
 mod hash;
-mod lock;
+mod part;
+
+pub use part::Part;
 
 use file_type::{mime_type, MimeType};
-use lock::FileLock;
+use part::PartLockSet;
 
-use crate::error::{internal, Error, Result};
+use crate::error::{Error, Result};
 
 use log::{debug, error};
 use std::{
     fs,
-    io::{self, ErrorKind},
-    os::{fd::AsRawFd, unix::fs::PermissionsExt},
+    io::ErrorKind,
+    os::unix::fs::PermissionsExt,
     path::{Path, PathBuf},
 };
-use tokio::{fs::OpenOptions, io::AsyncWriteExt};
+use tokio::fs::OpenOptions;
 use uuid::Uuid;
 
 const OBJECTS_DIR: &str = "objects";
@@ -61,35 +63,10 @@ pub struct Object {
     pub subtype: String,
 }
 
-pub struct Part {
-    id: Uuid,
-    path: PathBuf,
-    file: tokio::fs::File,
-    lock: FileLock,
-}
-
-impl Part {
-    pub async fn write(&mut self, data: &[u8]) -> Result<()> {
-        let mut written = 0;
-
-        while written < data.len() {
-            written += match self.file.write(&data[written..]).await {
-                Ok(bytes) => bytes,
-                Err(err) => internal!(
-                    "Failed to write data to part file '{}': {}",
-                    self.id,
-                    err
-                ),
-            }
-        }
-
-        Ok(())
-    }
-}
-
 pub struct Filesystem {
     objects: PathBuf,
     parts: PathBuf,
+    locked_parts: PartLockSet,
 }
 
 impl Filesystem {
@@ -97,7 +74,11 @@ impl Filesystem {
         let objects = home.join(OBJECTS_DIR);
         let parts = home.join(PARTS_DIR);
 
-        Filesystem { objects, parts }
+        Filesystem {
+            objects,
+            parts,
+            locked_parts: PartLockSet::new(),
+        }
     }
 
     pub async fn check(
@@ -119,8 +100,9 @@ impl Filesystem {
         }
     }
 
-    pub async fn commit(&self, part_id: Uuid) -> Result<Object> {
-        let object = self.move_part(&part_id)?;
+    pub async fn commit(&self, part_id: &Uuid) -> Result<Object> {
+        let _lock = self.locked_parts.lock(part_id);
+        let object = self.move_part(part_id)?;
 
         let metadata = object.metadata().map_err(|err| {
             Error::Internal(format!(
@@ -133,7 +115,7 @@ impl Filesystem {
         let MimeType { r#type, subtype } = mime_type(&object)?;
 
         Ok(Object {
-            id: part_id,
+            id: *part_id,
             hash: hash::sha256sum(&object).await?,
             size: metadata.len(),
             r#type,
@@ -182,6 +164,7 @@ impl Filesystem {
     }
 
     pub async fn part(&self, id: &Uuid) -> Result<Part> {
+        let lock = self.locked_parts.lock(id)?;
         let path = self.part_path(id);
 
         self.create_directories(&path)?;
@@ -197,14 +180,7 @@ impl Filesystem {
                 ))
             })?;
 
-        let lock = lock::exclusive(file.as_raw_fd())?;
-
-        Ok(Part {
-            id: *id,
-            file,
-            path,
-            lock,
-        })
+        Part::new(id, path, file, lock)
     }
 
     fn part_path(&self, id: &Uuid) -> PathBuf {

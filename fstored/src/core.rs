@@ -30,7 +30,7 @@ impl ObjectStore {
     pub async fn commit_part(
         &self,
         bucket_id: &Uuid,
-        part_id: Uuid,
+        part_id: &Uuid,
     ) -> Result<Object> {
         let metadata = self.filesystem.commit(part_id).await?;
 
