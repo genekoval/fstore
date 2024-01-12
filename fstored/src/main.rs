@@ -1,16 +1,20 @@
 use fstored::{
     conf::{self, Config},
-    store,
+    store, ObjectStore,
 };
 
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use std::{path::PathBuf, process::ExitCode};
 
 const COMPILE_CONFIG: Option<&str> = option_env!("FSTORED_DEFAULT_CONFIG");
 const DEFAULT_CONFIG: &str = "/etc/fstore/fstore.yml";
 
 #[derive(Parser)]
-#[command(author, version, about, long_about = None)]
+#[command(
+    version,
+    about = "Simple object storage server",
+    arg_required_else_help = true
+)]
 pub struct Cli {
     #[arg(
         short,
@@ -21,12 +25,21 @@ pub struct Cli {
         global = true
     )]
     config: PathBuf,
+
+    #[command(subcommand)]
+    command: Command,
+}
+
+#[derive(Subcommand)]
+enum Command {
+    #[command(about = "Retrieve basic information about the server")]
+    Status,
 }
 
 fn main() -> ExitCode {
-    let cli = Cli::parse();
+    let args = Cli::parse();
 
-    let config = match conf::read(&cli.config) {
+    let config = match conf::read(&args.config) {
         Ok(config) => config,
         Err(err) => {
             eprintln!("{err}");
@@ -34,19 +47,30 @@ fn main() -> ExitCode {
         }
     };
 
-    if let Err(err) = run(&config) {
-        eprintln!("{err}");
-        return ExitCode::FAILURE;
+    match run(&args, &config) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(err) => {
+            eprintln!("{err}");
+            ExitCode::FAILURE
+        }
     }
-
-    ExitCode::SUCCESS
 }
 
 #[tokio::main]
-async fn run(config: &Config) -> Result<(), Box<dyn std::error::Error>> {
-    let object_store = store::start(config).await?;
+async fn run(
+    args: &Cli,
+    config: &Config,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let store = store::start(config).await?;
 
-    let totals = object_store.get_totals().await?;
+    match args.command {
+        Command::Status => status(store).await,
+    }
+}
+
+async fn status(store: ObjectStore) -> Result<(), Box<dyn std::error::Error>> {
+    let totals = store.get_totals().await?;
+
     println!(
         "Buckets: {}\nObjects: {}\nSpace used: {}",
         totals.buckets, totals.objects, totals.space_used
