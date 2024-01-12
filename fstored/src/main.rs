@@ -1,4 +1,7 @@
-use fstored::conf;
+use fstored::{
+    conf::{self, Config},
+    store,
+};
 
 use clap::Parser;
 use std::{env, path::PathBuf, process::ExitCode};
@@ -35,7 +38,23 @@ fn main() -> ExitCode {
         }
     };
 
-    dbg!(config);
+    if let Err(err) = run(&config) {
+        eprintln!("{err}");
+        return ExitCode::FAILURE;
+    }
 
     ExitCode::SUCCESS
+}
+
+#[tokio::main]
+async fn run(config: &Config) -> Result<(), Box<dyn std::error::Error>> {
+    let object_store = store::start(config).await?;
+
+    let totals = object_store.get_totals().await?;
+    println!(
+        "Buckets: {}\nObjects: {}\nSpace used: {}",
+        totals.buckets, totals.objects, totals.space_used
+    );
+
+    Ok(())
 }

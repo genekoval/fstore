@@ -4,6 +4,8 @@ members = ["fstore", "fstore-core", "fstored", "sql-helper-macros"]
 
 [workspace.dependencies]
 serde = "1"
+sqlx = "0.7"
 time = "0.3"
 thiserror = "1"
+tokio = "1"
 uuid = "1"

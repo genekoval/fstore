@@ -8,3 +8,6 @@ clap = { version = "4", features = ["derive"] }
 fstore-core = { path = "../fstore-core" }
 serde = { workspace = true }
 serde_yaml = "0.9"
+sqlx = { workspace = true, features = ["postgres"] }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+url = "2"

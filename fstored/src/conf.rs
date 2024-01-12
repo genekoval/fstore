@@ -1,19 +1,20 @@
 use serde::{Deserialize, Serialize};
 use serde_yaml as yaml;
 use std::{
+    collections::HashMap,
     fs,
     path::{Path, PathBuf},
 };
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Database {
-    pub connection: String,
+    pub connection: HashMap<String, String>,
     pub max_connections: u32,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
-    pub data: PathBuf,
+    pub home: PathBuf,
     pub database: Database,
 }
 
