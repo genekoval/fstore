@@ -6,8 +6,10 @@ use fstored::{
 use clap::{Parser, Subcommand};
 use std::{path::PathBuf, process::ExitCode};
 
-const COMPILE_CONFIG: Option<&str> = option_env!("FSTORED_DEFAULT_CONFIG");
-const DEFAULT_CONFIG: &str = "/etc/fstore/fstore.yml";
+const DEFAULT_CONFIG: &str = match option_env!("FSTORED_DEFAULT_CONFIG") {
+    Some(config) => config,
+    None => "/etc/fstore/fstore.yml",
+};
 
 #[derive(Parser)]
 #[command(
@@ -21,7 +23,7 @@ pub struct Cli {
         long,
         value_name = "FILE",
         help = "Server config file in YAML format",
-        default_value = COMPILE_CONFIG.unwrap_or(DEFAULT_CONFIG),
+        default_value = DEFAULT_CONFIG,
         global = true
     )]
     config: PathBuf,
