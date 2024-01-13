@@ -6,6 +6,8 @@ use fstored::{
 use clap::{Parser, Subcommand};
 use std::{path::PathBuf, process::ExitCode};
 
+type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+
 const DEFAULT_CONFIG: &str = match option_env!("FSTORED_DEFAULT_CONFIG") {
     Some(config) => config,
     None => "/etc/fstore/fstore.yml",
@@ -60,10 +62,7 @@ fn main() -> ExitCode {
 }
 
 #[tokio::main]
-async fn run(
-    args: &Cli,
-    config: &Config,
-) -> Result<(), Box<dyn std::error::Error>> {
+async fn run(args: &Cli, config: &Config) -> Result<()> {
     let store = store::start(config).await?;
 
     match args.command {
@@ -75,7 +74,7 @@ async fn run(
     Ok(())
 }
 
-async fn status(store: &ObjectStore) -> Result<(), Box<dyn std::error::Error>> {
+async fn status(store: &ObjectStore) -> Result<()> {
     let totals = store.get_totals().await?;
 
     println!(
