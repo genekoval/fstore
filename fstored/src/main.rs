@@ -23,6 +23,7 @@ pub struct Cli {
         long,
         value_name = "FILE",
         help = "Server config file in YAML format",
+        env = "FSTORE_CONFIG",
         default_value = DEFAULT_CONFIG,
         global = true
     )]
