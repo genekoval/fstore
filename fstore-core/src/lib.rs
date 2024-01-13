@@ -95,7 +95,7 @@ impl ObjectStore {
             }
         };
 
-        Ok(self.filesystem.part(id).await?)
+        self.filesystem.part(id).await
     }
 
     pub async fn get_totals(&self) -> Result<StoreTotals> {

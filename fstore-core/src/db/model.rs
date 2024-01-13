@@ -13,14 +13,14 @@ pub struct Bucket {
     pub space_used: i64,
 }
 
-impl Into<fstore::Bucket> for Bucket {
-    fn into(self) -> fstore::Bucket {
+impl From<Bucket> for fstore::Bucket {
+    fn from(value: Bucket) -> Self {
         fstore::Bucket {
-            id: self.bucket_id,
-            name: self.name,
-            created: self.date_created,
-            size: self.size,
-            space_used: self.space_used,
+            id: value.bucket_id,
+            name: value.name,
+            created: value.date_created,
+            size: value.size,
+            space_used: value.space_used,
         }
     }
 }
@@ -35,15 +35,15 @@ pub struct Object {
     pub date_added: Date,
 }
 
-impl Into<fstore::Object> for Object {
-    fn into(self) -> fstore::Object {
+impl From<Object> for fstore::Object {
+    fn from(value: Object) -> Self {
         fstore::Object {
-            id: self.object_id,
-            hash: self.hash,
-            size: self.size.try_into().unwrap(),
-            r#type: self.r#type,
-            subtype: self.subtype,
-            added: self.date_added,
+            id: value.object_id,
+            hash: value.hash,
+            size: value.size.try_into().unwrap(),
+            r#type: value.r#type,
+            subtype: value.subtype,
+            added: value.date_added,
         }
     }
 }
@@ -54,11 +54,11 @@ pub struct RemoveResult {
     pub space_freed: i64,
 }
 
-impl Into<fstore::RemoveResult> for RemoveResult {
-    fn into(self) -> fstore::RemoveResult {
+impl From<RemoveResult> for fstore::RemoveResult {
+    fn from(value: RemoveResult) -> Self {
         fstore::RemoveResult {
-            objects_removed: self.objects_removed.try_into().unwrap(),
-            space_freed: self.space_freed.try_into().unwrap(),
+            objects_removed: value.objects_removed.try_into().unwrap(),
+            space_freed: value.space_freed.try_into().unwrap(),
         }
     }
 }
@@ -70,12 +70,12 @@ pub struct StoreTotals {
     pub space_used: i64,
 }
 
-impl Into<fstore::StoreTotals> for StoreTotals {
-    fn into(self) -> fstore::StoreTotals {
+impl From<StoreTotals> for fstore::StoreTotals {
+    fn from(value: StoreTotals) -> Self {
         fstore::StoreTotals {
-            buckets: self.buckets.try_into().unwrap(),
-            objects: self.objects.try_into().unwrap(),
-            space_used: self.space_used.try_into().unwrap(),
+            buckets: value.buckets.try_into().unwrap(),
+            objects: value.objects.try_into().unwrap(),
+            space_used: value.space_used.try_into().unwrap(),
         }
     }
 }
@@ -86,11 +86,11 @@ pub struct ObjectError {
     pub message: String,
 }
 
-impl Into<fstore::ObjectError> for ObjectError {
-    fn into(self) -> fstore::ObjectError {
+impl From<ObjectError> for fstore::ObjectError {
+    fn from(value: ObjectError) -> Self {
         fstore::ObjectError {
-            object_id: self.object_id,
-            message: self.message,
+            object_id: value.object_id,
+            message: value.message,
         }
     }
 }
