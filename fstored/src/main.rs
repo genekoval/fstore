@@ -64,11 +64,15 @@ async fn run(
     let store = store::start(config).await?;
 
     match args.command {
-        Command::Status => status(store).await,
-    }
+        Command::Status => status(&store).await,
+    }?;
+
+    store.shutdown().await;
+
+    Ok(())
 }
 
-async fn status(store: ObjectStore) -> Result<(), Box<dyn std::error::Error>> {
+async fn status(store: &ObjectStore) -> Result<(), Box<dyn std::error::Error>> {
     let totals = store.get_totals().await?;
 
     println!(

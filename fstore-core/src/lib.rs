@@ -152,4 +152,8 @@ impl ObjectStore {
     ) -> Result<()> {
         Ok(self.database.rename_bucket(bucket_id, new_name).await?)
     }
+
+    pub async fn shutdown(self) {
+        self.database.close().await
+    }
 }
