@@ -3,7 +3,9 @@ resolver = "2"
 members = ["fstore", "fstore-core", "fstored", "sql-helper-macros"]
 
 [workspace.dependencies]
+log = "0.4"
 serde = "1"
+shadow-rs = "0.26"
 sqlx = "0.7"
 time = "0.3"
 thiserror = "1"

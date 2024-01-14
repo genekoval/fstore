@@ -13,7 +13,13 @@ pub struct Database {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+pub struct Http {
+    pub listen: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
+    pub http: Http,
     pub home: PathBuf,
     pub database: Database,
 }

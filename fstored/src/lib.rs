@@ -1,4 +1,5 @@
 pub mod conf;
+pub mod server;
 pub mod store;
 
 pub use conf::Config;

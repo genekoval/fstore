@@ -1,10 +1,14 @@
 use fstored::{
     conf::{self, Config},
-    store, ObjectStore,
+    server, store, ObjectStore,
 };
 
 use clap::{Parser, Subcommand};
+use fstore_core::Version;
+use shadow_rs::shadow;
 use std::{path::PathBuf, process::ExitCode};
+
+shadow!(build);
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
@@ -16,6 +20,7 @@ const DEFAULT_CONFIG: &str = match option_env!("FSTORED_DEFAULT_CONFIG") {
 #[derive(Parser)]
 #[command(
     version,
+    long_version = build::CLAP_LONG_VERSION,
     about = "Simple object storage server",
     arg_required_else_help = true
 )]
@@ -37,7 +42,11 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-    #[command(about = "Retrieve basic information about the server")]
+    #[command(about = "Start the web server")]
+    Serve,
+    #[command(
+        about = "Retrieve basic information about the object repository"
+    )]
     Status,
 }
 
@@ -61,16 +70,30 @@ fn main() -> ExitCode {
     }
 }
 
+fn version() -> Version {
+    Version {
+        number: build::PKG_VERSION,
+        branch: build::BRANCH,
+        build_time: build::BUILD_TIME,
+        build_os: build::BUILD_OS,
+        build_type: build::BUILD_RUST_CHANNEL,
+        commit_hash: build::COMMIT_HASH,
+        commit_date: build::COMMIT_DATE,
+        rust_version: build::RUST_VERSION,
+        rust_channel: build::RUST_CHANNEL,
+    }
+}
+
 #[tokio::main]
 async fn run(args: &Cli, config: &Config) -> Result<()> {
-    let store = store::start(config).await?;
+    let store = store::start(version(), config).await?;
 
     match args.command {
+        Command::Serve => server::serve(&config.http, store.clone()).await,
         Command::Status => status(&store).await,
     }?;
 
     store.shutdown().await;
-
     Ok(())
 }
 

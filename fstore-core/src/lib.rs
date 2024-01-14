@@ -1,9 +1,12 @@
 mod db;
 mod error;
 mod fs;
+mod model;
 
 pub use db::Database;
+pub use error::Error;
 pub use fs::{Filesystem, Part};
+pub use model::*;
 
 use crate::error::Result;
 
@@ -12,16 +15,26 @@ use log::info;
 use uuid::Uuid;
 
 pub struct ObjectStore {
+    about: About,
     database: Database,
     filesystem: Filesystem,
 }
 
 impl ObjectStore {
-    pub fn new(database: Database, filesystem: Filesystem) -> ObjectStore {
-        ObjectStore {
+    pub fn new(
+        version: Version,
+        database: Database,
+        filesystem: Filesystem,
+    ) -> Self {
+        Self {
+            about: About { version },
             database,
             filesystem,
         }
+    }
+
+    pub fn about(&self) -> &About {
+        &self.about
     }
 
     pub async fn add_bucket(&self, name: &str) -> Result<Bucket> {
@@ -153,7 +166,7 @@ impl ObjectStore {
         Ok(self.database.rename_bucket(bucket_id, new_name).await?)
     }
 
-    pub async fn shutdown(self) {
+    pub async fn shutdown(&self) {
         self.database.close().await
     }
 }

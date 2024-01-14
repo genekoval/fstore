@@ -2,12 +2,20 @@
 name = "fstored"
 version = "0.1.0"
 edition = "2021"
+build = "build.rs"
 
 [dependencies]
+axum = "0.7"
 clap = { version = "4", features = ["derive", "env"] }
+fstore = { path = "../fstore" }
 fstore-core = { path = "../fstore-core" }
+log = { workspace = true }
 serde = { workspace = true }
 serde_yaml = "0.9"
+shadow-rs = { workspace = true }
 sqlx = { workspace = true, features = ["postgres"] }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 url = "2"
+
+[build-dependencies]
+shadow-rs = { workspace = true }
