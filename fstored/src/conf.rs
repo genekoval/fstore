@@ -1,3 +1,4 @@
+use log::LevelFilter;
 use serde::{Deserialize, Serialize};
 use serde_yaml as yaml;
 use std::{
@@ -5,6 +6,7 @@ use std::{
     fs,
     path::{Path, PathBuf},
 };
+use timber::Sink;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Database {
@@ -18,10 +20,35 @@ pub struct Http {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+pub struct Log {
+    #[serde(default = "Log::default_level")]
+    pub level: LevelFilter,
+    #[serde(default)]
+    pub sink: Sink,
+}
+
+impl Log {
+    fn default_level() -> LevelFilter {
+        LevelFilter::Info
+    }
+}
+
+impl Default for Log {
+    fn default() -> Self {
+        Self {
+            level: Self::default_level(),
+            sink: Default::default(),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
-    pub http: Http,
-    pub home: PathBuf,
     pub database: Database,
+    pub home: PathBuf,
+    pub http: Http,
+    #[serde(default)]
+    pub log: Log,
 }
 
 pub fn read(path: &Path) -> Result<Config, String> {

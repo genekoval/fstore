@@ -53,13 +53,27 @@ enum Command {
 fn main() -> ExitCode {
     let args = Cli::parse();
 
-    let config = match conf::read(&args.config) {
+    let mut config = match conf::read(&args.config) {
         Ok(config) => config,
         Err(err) => {
             eprintln!("{err}");
             return ExitCode::FAILURE;
         }
     };
+
+    if let timber::Sink::Syslog(ref mut syslog) = config.log.sink {
+        syslog.identifier = String::from("fstore");
+        syslog.logopt = timber::syslog::LogOption::Pid;
+    }
+
+    if let Err(err) = timber::new()
+        .max_level(config.log.level)
+        .sink(config.log.sink.clone())
+        .init()
+    {
+        eprintln!("Failed to initialize logger: {err}");
+        return ExitCode::FAILURE;
+    }
 
     match run(&args, &config) {
         Ok(()) => ExitCode::SUCCESS,

@@ -1,0 +1,13 @@
+[package]
+name = "timber"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bitflags = "2"
+chrono = "0.4"
+libc = "0.2"
+log = { version = "0.4", features = ["std"] }
+owo-colors = "4"
+serde = { version = "1", optional = true, default-features = false }
+thiserror = "1"

@@ -9,12 +9,13 @@ axum = "0.7"
 clap = { version = "4", features = ["derive", "env"] }
 fstore = { path = "../fstore" }
 fstore-core = { path = "../fstore-core" }
-log = { workspace = true }
+log = { workspace = true, features = ["serde"] }
 serde = { workspace = true }
 serde_yaml = "0.9"
 shadow-rs = { workspace = true }
 sqlx = { workspace = true, features = ["postgres"] }
-tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
+timber = { path = "../timber", features = ["serde"] }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "signal"] }
 url = "2"
 
 [build-dependencies]
