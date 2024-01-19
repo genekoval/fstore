@@ -49,6 +49,7 @@ pub struct Config {
     pub http: Http,
     #[serde(default)]
     pub log: Log,
+    pub user: Option<String>,
 }
 
 pub fn read(path: &Path) -> Result<Config, String> {

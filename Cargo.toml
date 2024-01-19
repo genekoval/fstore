@@ -1,6 +1,13 @@
 [workspace]
 resolver = "2"
-members = ["fstore", "fstore-core", "fstored", "sql-helper-macros", "timber"]
+members = [
+    "dmon",
+    "fstore",
+    "fstore-core",
+    "fstored",
+    "sql-helper-macros",
+    "timber",
+]
 
 [workspace.dependencies]
 log = "0.4"

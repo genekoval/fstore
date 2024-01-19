@@ -4,7 +4,7 @@ mod router;
 use crate::conf::Http;
 
 use fstore_core::ObjectStore;
-use log::info;
+use log::{error, info};
 use std::sync::Arc;
 use tokio::{net::TcpListener, signal};
 
@@ -16,6 +16,7 @@ struct AppState {
 pub async fn serve(
     config: &Http,
     store: Arc<ObjectStore>,
+    parent: &mut dmon::Parent,
 ) -> Result<(), Box<dyn std::error::Error>> {
     info!(
         "fstore version {} starting up",
@@ -23,8 +24,12 @@ pub async fn serve(
     );
 
     let app = router::routes().with_state(AppState { store });
-
     let listener = TcpListener::bind(&config.listen).await?;
+
+    if let Err(err) = parent.notify() {
+        error!("Failed to notify parent process of successful start: {err}");
+    }
+
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal())
         .await?;

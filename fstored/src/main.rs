@@ -5,6 +5,7 @@ use fstored::{
 
 use clap::{Parser, Subcommand};
 use fstore_core::Version;
+use log::error;
 use shadow_rs::shadow;
 use std::{path::PathBuf, process::ExitCode};
 
@@ -43,7 +44,14 @@ pub struct Cli {
 #[derive(Subcommand)]
 enum Command {
     #[command(about = "Start the web server")]
-    Serve,
+    Serve {
+        #[arg(short, long, help = "Run the server as a daemon process")]
+        daemon: bool,
+
+        #[arg(short, long, help = "Path to the pidfile", requires = "daemon")]
+        pidfile: Option<PathBuf>,
+    },
+
     #[command(
         about = "Retrieve basic information about the object repository"
     )]
@@ -61,24 +69,46 @@ fn main() -> ExitCode {
         }
     };
 
-    if let timber::Sink::Syslog(ref mut syslog) = config.log.sink {
+    let mut parent = dmon::Parent::default();
+
+    if let Command::Serve { daemon, pidfile } = &args.command {
+        if *daemon {
+            config.log.sink = timber::Sink::Syslog(timber::syslog::Config {
+                identifier: String::from("fstore"),
+                logopt: timber::syslog::LogOption::Pid,
+                facility: timber::syslog::Facility::Daemon,
+            });
+
+            parent = dmon::options()
+                .chdir(Some(&config.home))
+                .permissions(config.user.as_deref())
+                .pidfile(pidfile.as_deref())
+                .daemonize();
+        }
+    } else if let timber::Sink::Syslog(ref mut syslog) = config.log.sink {
         syslog.identifier = String::from("fstore");
         syslog.logopt = timber::syslog::LogOption::Pid;
     }
 
-    if let Err(err) = timber::new()
-        .max_level(config.log.level)
-        .sink(config.log.sink.clone())
-        .init()
-    {
-        eprintln!("Failed to initialize logger: {err}");
-        return ExitCode::FAILURE;
-    }
+    match || -> Result<()> {
+        timber::new()
+            .max_level(config.log.level)
+            .sink(config.log.sink.clone())
+            .init()
+            .map_err(|err| format!("Failed to initialize logger: {err}"))?;
 
-    match run(&args, &config) {
+        run(&args, &config, &mut parent)
+    }() {
         Ok(()) => ExitCode::SUCCESS,
         Err(err) => {
-            eprintln!("{err}");
+            error!("{err}");
+
+            if parent.is_waiting() {
+                if let Err(write_error) = parent.write(&format!("{err}")) {
+                    error!("Failed to write to parent process: {write_error}");
+                }
+            }
+
             ExitCode::FAILURE
         }
     }
@@ -99,11 +129,17 @@ fn version() -> Version {
 }
 
 #[tokio::main]
-async fn run(args: &Cli, config: &Config) -> Result<()> {
+async fn run(
+    args: &Cli,
+    config: &Config,
+    parent: &mut dmon::Parent,
+) -> Result<()> {
     let store = store::start(version(), config).await?;
 
     match args.command {
-        Command::Serve => server::serve(&config.http, store.clone()).await,
+        Command::Serve { .. } => {
+            server::serve(&config.http, store.clone(), parent).await
+        }
         Command::Status => status(&store).await,
     }?;
 

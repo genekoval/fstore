@@ -16,7 +16,7 @@ use std::{
     os::unix::fs::PermissionsExt,
     path::{Path, PathBuf},
 };
-use tokio::fs::OpenOptions;
+use tokio::fs::File;
 use uuid::Uuid;
 
 const OBJECTS_DIR: &str = "objects";
@@ -168,7 +168,7 @@ impl Filesystem {
         let path = self.part_path(id);
 
         self.create_directories(&path)?;
-        let file = OpenOptions::new()
+        let file = File::options()
             .create(true)
             .append(true)
             .open(&path)

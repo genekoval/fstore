@@ -7,6 +7,7 @@ build = "build.rs"
 [dependencies]
 axum = "0.7"
 clap = { version = "4", features = ["derive", "env"] }
+dmon = { path = "../dmon" }
 fstore = { path = "../fstore" }
 fstore-core = { path = "../fstore-core" }
 log = { workspace = true, features = ["serde"] }
