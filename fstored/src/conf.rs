@@ -1,3 +1,4 @@
+use axum_unix::Endpoint;
 use log::LevelFilter;
 use serde::{Deserialize, Serialize};
 use serde_yaml as yaml;
@@ -16,7 +17,7 @@ pub struct Database {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Http {
-    pub listen: String,
+    pub listen: Endpoint,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

@@ -1,5 +1,7 @@
 #![cfg(feature = "serde")]
 
+use crate::Sink;
+
 use serde::{
     de::{Deserialize, Error, Visitor},
     ser::{Serialize, Serializer},
@@ -8,8 +10,6 @@ use std::{
     fmt::{self, Formatter},
     path::PathBuf,
 };
-
-use crate::Sink;
 
 impl Serialize for Sink {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>

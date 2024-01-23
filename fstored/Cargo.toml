@@ -6,6 +6,7 @@ build = "build.rs"
 
 [dependencies]
 axum = "0.7"
+axum-unix = { path = "../axum-unix", features = ["serde"] }
 clap = { version = "4", features = ["derive", "env"] }
 dmon = { path = "../dmon" }
 fstore = { path = "../fstore" }
