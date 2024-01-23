@@ -69,7 +69,7 @@ impl ObjectStore {
     pub async fn get_buckets(&self) -> Result<Vec<Bucket>> {
         Ok(self
             .database
-            .fetch_buckets()
+            .fetch_buckets_all()
             .await?
             .into_iter()
             .map(|bucket| bucket.into())

@@ -4,6 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+chrono = { workspace = true, features = ["serde"] }
 serde = { workspace = true }
-time = { workspace = true, features = ["serde"] }
 uuid = { workspace = true, features = ["serde"] }

@@ -19,7 +19,7 @@ database! {
 
     fetch_bucket(name: &str) -> Bucket;
 
-    fetch_buckets() -> Vec<Bucket>;
+    fetch_buckets_all() -> Vec<Bucket>;
 
     fetch_store_totals() -> StoreTotals;
 

@@ -19,6 +19,7 @@ sqlx = { workspace = true, features = ["postgres"] }
 timber = { path = "../timber", features = ["serde"] }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread", "signal"] }
 url = "2"
+uuid = { workspace = true }
 
 [build-dependencies]
 shadow-rs = { workspace = true }

@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 base16ct = "0.2"
+chrono = { workspace = true }
 fstore = { path = "../fstore" }
 libc = "0.2"
 log = { workspace = true }
@@ -13,10 +14,10 @@ sha2 = "0.10"
 serde = { workspace = true }
 sql-helper-macros = { path = "../sql-helper-macros" }
 sqlx = { workspace = true, features = [
+    "chrono",
     "macros",
     "postgres",
     "runtime-tokio",
-    "time",
     "uuid",
 ] }
 thiserror = { workspace = true }

@@ -1,15 +1,13 @@
+use chrono::{DateTime, Local};
 use sqlx::{Encode, Postgres};
-
-use time::Date;
-
 use uuid::Uuid;
 
-#[derive(sqlx::FromRow)]
+#[derive(Debug, sqlx::FromRow)]
 pub struct Bucket {
     pub bucket_id: Uuid,
     pub name: String,
-    pub date_created: Date,
-    pub size: i64,
+    pub date_created: DateTime<Local>,
+    pub object_count: i64,
     pub space_used: i64,
 }
 
@@ -19,20 +17,20 @@ impl From<Bucket> for fstore::Bucket {
             id: value.bucket_id,
             name: value.name,
             created: value.date_created,
-            size: value.size,
+            object_count: value.object_count,
             space_used: value.space_used,
         }
     }
 }
 
-#[derive(sqlx::FromRow)]
+#[derive(Debug, sqlx::FromRow)]
 pub struct Object {
     pub object_id: Uuid,
     pub hash: String,
     pub size: i64,
     pub r#type: String,
     pub subtype: String,
-    pub date_added: Date,
+    pub date_added: DateTime<Local>,
 }
 
 impl From<Object> for fstore::Object {
@@ -48,7 +46,7 @@ impl From<Object> for fstore::Object {
     }
 }
 
-#[derive(sqlx::FromRow)]
+#[derive(Debug, sqlx::FromRow)]
 pub struct RemoveResult {
     pub objects_removed: i64,
     pub space_freed: i64,
@@ -63,7 +61,7 @@ impl From<RemoveResult> for fstore::RemoveResult {
     }
 }
 
-#[derive(sqlx::FromRow)]
+#[derive(Debug, sqlx::FromRow)]
 pub struct StoreTotals {
     pub buckets: i64,
     pub objects: i64,
@@ -80,7 +78,7 @@ impl From<StoreTotals> for fstore::StoreTotals {
     }
 }
 
-#[derive(sqlx::FromRow)]
+#[derive(Debug, sqlx::FromRow)]
 pub struct ObjectError {
     pub object_id: Uuid,
     pub message: String,
