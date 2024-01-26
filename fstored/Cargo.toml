@@ -6,12 +6,14 @@ build = "build.rs"
 
 [dependencies]
 axum = "0.7"
+axum-extra = { version = "0.9", features = ["async-read-body", "typed-header"] }
 axum-unix = { path = "../axum-unix", features = ["serde"] }
 clap = { version = "4", features = ["derive", "env"] }
 dmon = { path = "../dmon" }
 fstore = { path = "../fstore" }
 fstore-core = { path = "../fstore-core" }
 log = { workspace = true, features = ["serde"] }
+mime = "0.3"
 serde = { workspace = true }
 serde_yaml = "0.9"
 shadow-rs = { workspace = true }

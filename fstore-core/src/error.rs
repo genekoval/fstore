@@ -8,9 +8,29 @@ pub enum Error {
 
     #[error("{0}")]
     Internal(String),
+
+    #[error("{0} not found")]
+    NotFound(&'static str),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
+
+pub trait OptionNotFound {
+    type Value;
+
+    fn ok_or_not_found(self, entity: &'static str) -> Result<Self::Value>;
+}
+
+impl<T> OptionNotFound for Option<T> {
+    type Value = T;
+
+    fn ok_or_not_found(self, entity: &'static str) -> Result<Self::Value> {
+        match self {
+            Some(value) => Ok(value),
+            None => Err(Error::NotFound(entity)),
+        }
+    }
+}
 
 macro_rules! internal {
     ($msg:literal) => {

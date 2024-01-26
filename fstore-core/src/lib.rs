@@ -5,10 +5,10 @@ mod model;
 
 pub use db::Database;
 pub use error::Error;
-pub use fs::{Filesystem, Part};
+pub use fs::{File, Filesystem, Part};
 pub use model::*;
 
-use crate::error::Result;
+use crate::error::{OptionNotFound, Result};
 
 use fstore::{Bucket, Object, ObjectError, RemoveResult, StoreTotals};
 use log::info;
@@ -86,16 +86,20 @@ impl ObjectStore {
             .collect())
     }
 
+    pub async fn get_object(&self, object_id: &Uuid) -> Result<File> {
+        self.filesystem.object(object_id).await
+    }
+
     pub async fn get_object_metadata(
         &self,
         bucket_id: &Uuid,
         object_id: &Uuid,
-    ) -> Result<Option<Object>> {
-        Ok(self
-            .database
+    ) -> Result<Object> {
+        self.database
             .get_object(bucket_id, object_id)
             .await?
-            .map(|object| object.into()))
+            .map(|object| object.into())
+            .ok_or_not_found("Object")
     }
 
     pub async fn get_part(&self, part_id: Option<&Uuid>) -> Result<Part> {
@@ -125,7 +129,14 @@ impl ObjectStore {
 
         tx.commit().await?;
 
-        info!("Pruned {} objects", objects.len());
+        info!(
+            "Pruned {} object{}",
+            objects.len(),
+            match objects.len() {
+                1 => "",
+                _ => "s",
+            }
+        );
 
         Ok(objects.into_iter().map(|object| object.into()).collect())
     }
@@ -138,12 +149,12 @@ impl ObjectStore {
         &self,
         bucket_id: &Uuid,
         object_id: &Uuid,
-    ) -> Result<Option<Object>> {
-        Ok(self
-            .database
+    ) -> Result<Object> {
+        self.database
             .remove_object(bucket_id, object_id)
             .await?
-            .map(|object| object.into()))
+            .map(|object| object.into())
+            .ok_or_not_found("Bucket or object not found")
     }
 
     pub async fn remove_objects(

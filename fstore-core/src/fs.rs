@@ -3,6 +3,7 @@ mod hash;
 mod part;
 
 pub use part::Part;
+pub use tokio::fs::File;
 
 use file_type::{mime_type, MimeType};
 use part::PartLockSet;
@@ -16,13 +17,31 @@ use std::{
     os::unix::fs::PermissionsExt,
     path::{Path, PathBuf},
 };
-use tokio::fs::File;
 use uuid::Uuid;
 
 const OBJECTS_DIR: &str = "objects";
 const PARTS_DIR: &str = "parts";
 
 const OBJECT_PERMISSIONS: u32 = 0o640;
+
+fn create_directories(file: &Path) -> Result<()> {
+    let parent = file.parent().ok_or_else(|| {
+        Error::Internal(format!(
+            "No parent directory for file '{}'",
+            file.display()
+        ))
+    })?;
+
+    fs::create_dir_all(parent).map_err(|err| {
+        Error::Internal(format!(
+            "Failed to create parent directories \
+            for file '{}': {err}",
+            parent.display()
+        ))
+    })?;
+
+    Ok(())
+}
 
 fn path_for_id(parent: &Path, id: &Uuid) -> PathBuf {
     const ID_SLICE_SIZE: usize = 2;
@@ -42,6 +61,8 @@ fn path_for_id(parent: &Path, id: &Uuid) -> PathBuf {
         result.push(&id[start..end]);
     }
 
+    result.push(id);
+
     result
 }
 
@@ -55,6 +76,7 @@ fn remove(path: PathBuf) {
     };
 }
 
+#[derive(Debug)]
 pub struct Object {
     pub id: Uuid,
     pub hash: String,
@@ -63,6 +85,7 @@ pub struct Object {
     pub subtype: String,
 }
 
+#[derive(Debug)]
 pub struct Filesystem {
     objects: PathBuf,
     parts: PathBuf,
@@ -70,13 +93,10 @@ pub struct Filesystem {
 }
 
 impl Filesystem {
-    pub fn new(home: &Path) -> Filesystem {
-        let objects = home.join(OBJECTS_DIR);
-        let parts = home.join(PARTS_DIR);
-
-        Filesystem {
-            objects,
-            parts,
+    pub fn new(home: &Path) -> Self {
+        Self {
+            objects: home.join(OBJECTS_DIR),
+            parts: home.join(PARTS_DIR),
             locked_parts: PartLockSet::new(),
         }
     }
@@ -123,30 +143,11 @@ impl Filesystem {
         })
     }
 
-    fn create_directories(&self, file: &Path) -> Result<()> {
-        let parent = file.parent().ok_or_else(|| {
-            Error::Internal(format!(
-                "No parent directory for file '{}'",
-                file.display()
-            ))
-        })?;
-
-        fs::create_dir_all(parent).map_err(|err| {
-            Error::Internal(format!(
-                "Failed to create parent directories \
-                for file '{}': {err}",
-                parent.display()
-            ))
-        })?;
-
-        Ok(())
-    }
-
     fn move_part(&self, part_id: &Uuid) -> Result<PathBuf> {
         let part = self.part_path(part_id);
         let object = self.object_path(part_id);
 
-        self.create_directories(&object)?;
+        create_directories(&object)?;
         fs::rename(&part, &object).map_err(|err| {
             Error::Internal(format!(
                 "Failed to move part file to objects directory \
@@ -159,28 +160,24 @@ impl Filesystem {
         Ok(object)
     }
 
+    pub async fn object(&self, id: &Uuid) -> Result<File> {
+        let path = self.object_path(id);
+        let file = File::open(&path).await.map_err(|err| {
+            Error::Internal(format!(
+                "Failed to open object file '{}': {err}",
+                path.display()
+            ))
+        })?;
+
+        Ok(file)
+    }
+
     fn object_path(&self, id: &Uuid) -> PathBuf {
         path_for_id(&self.objects, id)
     }
 
     pub async fn part(&self, id: &Uuid) -> Result<Part> {
-        let lock = self.locked_parts.lock(id)?;
-        let path = self.part_path(id);
-
-        self.create_directories(&path)?;
-        let file = File::options()
-            .create(true)
-            .append(true)
-            .open(&path)
-            .await
-            .map_err(|err| {
-                Error::Internal(format!(
-                    "Failed to open part file '{}': {err}",
-                    path.display()
-                ))
-            })?;
-
-        Part::new(path, file, lock)
+        Part::open(id, self.part_path(id), &self.locked_parts).await
     }
 
     fn part_path(&self, id: &Uuid) -> PathBuf {

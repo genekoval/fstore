@@ -26,6 +26,10 @@ impl IntoResponse for Error {
                 }
                 _ => error!("{error}: {sql}"),
             },
+            NotFound(_) => {
+                return (StatusCode::NOT_FOUND, format!("{error}"))
+                    .into_response()
+            }
             _ => error!("{error}"),
         };
 
