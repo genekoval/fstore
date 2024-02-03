@@ -17,8 +17,8 @@ impl From<Bucket> for fstore::Bucket {
             id: value.bucket_id,
             name: value.name,
             created: value.date_created,
-            object_count: value.object_count,
-            space_used: value.space_used,
+            object_count: value.object_count.try_into().unwrap(),
+            space_used: value.space_used.try_into().unwrap(),
         }
     }
 }

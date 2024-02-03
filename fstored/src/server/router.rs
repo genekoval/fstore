@@ -25,7 +25,7 @@ enum IdListRejection {
     BytesRejection(BytesRejection),
     InvalidUtf8(std::str::Utf8Error),
     InvalidUuid(uuid::Error),
-    MissingIdListContentType,
+    MissingIdListContentType(String),
 }
 
 impl IntoResponse for IdListRejection {
@@ -43,10 +43,10 @@ impl IntoResponse for IdListRejection {
                 StatusCode::BAD_REQUEST,
                 format!("Invalid UUID in request body: {err}"),
             ),
-            Self::MissingIdListContentType => (
+            Self::MissingIdListContentType(err) => (
                 StatusCode::UNSUPPORTED_MEDIA_TYPE,
                 format!(
-                    "Expected content of type `{}`",
+                    "Expected content of type `{}`: {err}",
                     mime::TEXT_PLAIN_UTF_8
                 ),
             ),
@@ -76,19 +76,31 @@ where
             Some(content_type) => match content_type.to_str() {
                 Ok(content_type) => match content_type.parse::<Mime>() {
                     Ok(mime) => mime,
-                    Err(_) => {
-                        return Err(IdListRejection::MissingIdListContentType)
+                    Err(err) => {
+                        return Err(IdListRejection::MissingIdListContentType(
+                            format!(
+                                "failed to parse provided content type: {err}"
+                            ),
+                        ))
                     }
                 },
-                Err(_) => {
-                    return Err(IdListRejection::MissingIdListContentType)
+                Err(err) => {
+                    return Err(IdListRejection::MissingIdListContentType(
+                        format!("{err}"),
+                    ))
                 }
             },
-            None => return Err(IdListRejection::MissingIdListContentType),
+            None => {
+                return Err(IdListRejection::MissingIdListContentType(
+                    "no content type provided".into(),
+                ))
+            }
         };
 
         if content_type != mime::TEXT_PLAIN_UTF_8 {
-            return Err(IdListRejection::MissingIdListContentType);
+            return Err(IdListRejection::MissingIdListContentType(format!(
+                "received '{content_type}'"
+            )));
         }
 
         let bytes = Bytes::from_request(req, state).await?;
@@ -288,6 +300,6 @@ pub fn routes() -> Router<AppState> {
                 .delete(remove_object),
         )
         .route("/object/:bucket/:object/data", get(get_object_data))
-        .route("/prune", get(prune))
+        .route("/objects", delete(prune))
         .route("/status", get(status))
 }

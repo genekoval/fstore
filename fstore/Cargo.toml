@@ -5,5 +5,57 @@ edition = "2021"
 
 [dependencies]
 chrono = { workspace = true, features = ["serde"] }
+log = { workspace = true }
 serde = { workspace = true }
+thiserror = { workspace = true }
 uuid = { workspace = true, features = ["serde"] }
+
+# HTTP dependencies
+bytes = { version = "1", optional = true }
+futures-core = { version = "0.3", optional = true }
+mime = { version = "0.3", optional = true }
+reqwest = { version = "0.11", features = ["json", "stream"], optional = true }
+tokio-stream = { version = "0.1", optional = true }
+tokio-util = { version = "0.7", optional = true }
+url = { version = "2", features = ["serde"], optional = true }
+
+# `fstore` CLI dependencies
+bytesize = { version = "1", optional = true }
+chrono-humanize = { version = "0.2", optional = true }
+clap = { workspace = true, features = ["derive", "env"], optional = true }
+num-format = { version = "0.4", features = [
+    "with-system-locale",
+], optional = true }
+serde_json = { version = "1", optional = true }
+serde_yaml = { workspace = true }
+tabled = { version = "0.15", optional = true }
+tokio = { workspace = true, features = [
+    "io-std",
+    "macros",
+    "rt",
+], optional = true }
+
+[features]
+cli = [
+    "http",
+    "dep:bytesize",
+    "dep:chrono-humanize",
+    "dep:clap",
+    "dep:num-format",
+    "dep:serde_json",
+    "dep:tabled",
+    "dep:tokio",
+    "dep:tokio-stream",
+]
+http = [
+    "dep:bytes",
+    "dep:futures-core",
+    "dep:mime",
+    "dep:reqwest",
+    "dep:tokio-util",
+    "dep:url",
+]
+
+[[bin]]
+name = "fstore"
+required-features = ["cli"]
