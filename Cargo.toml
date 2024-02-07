@@ -6,6 +6,7 @@ members = [
     "fstore",
     "fstore-core",
     "fstored",
+    "pgtools",
     "sql-helper-macros",
     "timber",
 ]

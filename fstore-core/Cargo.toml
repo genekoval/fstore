@@ -1,6 +1,6 @@
 [package]
 name = "fstore-core"
-version = "0.1.0"
+version = "0.3.6"
 edition = "2021"
 
 [dependencies]
@@ -12,6 +12,7 @@ futures = "0.3"
 libc = "0.2"
 log = { workspace = true }
 magic = "0.16"
+pgtools = { path = "../pgtools" }
 sha2 = "0.10"
 serde = { workspace = true }
 sql-helper-macros = { path = "../sql-helper-macros" }

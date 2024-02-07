@@ -1,7 +1,7 @@
 mod error;
 mod router;
 
-use crate::conf::Http;
+use crate::{conf::Http, Result};
 
 use fstore_core::ObjectStore;
 use log::{error, info};
@@ -16,11 +16,13 @@ pub async fn serve(
     config: &Http,
     store: Arc<ObjectStore>,
     parent: &mut dmon::Parent,
-) -> Result<(), Box<dyn std::error::Error>> {
+) -> Result {
     info!(
         "fstore version {} starting up",
         store.about().version.number
     );
+
+    store.prepare().await?;
 
     let app = router::routes().with_state(AppState { store });
 

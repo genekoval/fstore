@@ -1,17 +1,15 @@
 use fstored::{
     conf::{self, Config},
-    server, store, ObjectStore,
+    server, store, ObjectStore, Result,
 };
 
 use clap::{Parser, Subcommand};
 use fstore_core::Version;
 use log::error;
 use shadow_rs::shadow;
-use std::{path::PathBuf, process::ExitCode};
+use std::{future::Future, path::PathBuf, process::ExitCode, sync::Arc};
 
 shadow!(build);
-
-type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 const DEFAULT_CONFIG: &str = match option_env!("FSTORED_DEFAULT_CONFIG") {
     Some(config) => config,
@@ -30,11 +28,11 @@ pub struct Cli {
         short,
         long,
         value_name = "FILE",
-        help = "Server config file in YAML format",
         env = "FSTORED_CONFIG",
         default_value = DEFAULT_CONFIG,
         global = true
     )]
+    /// Server config file in YAML format
     config: PathBuf,
 
     #[command(subcommand)]
@@ -43,19 +41,46 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
-    #[command(about = "Start the web server")]
-    Serve {
-        #[arg(short, long, help = "Run the server as a daemon process")]
-        daemon: bool,
-
-        #[arg(short, long, help = "Path to the pidfile", requires = "daemon")]
-        pidfile: Option<PathBuf>,
+    /// Create a backup of the database and object files
+    Archive {
+        /// Directory to sync data to
+        ///
+        /// If omitted, the config file's 'archive' setting is used
+        directory: Option<PathBuf>,
     },
 
-    #[command(
-        about = "Retrieve basic information about the object repository"
-    )]
-    Status,
+    /// Initialize the database
+    Init {
+        /// Delete existing data if necessary
+        overwrite: bool,
+    },
+
+    /// Update schemas to match the current program version
+    Migrate,
+
+    /// Restore database data and object files from a backup
+    Restore {
+        /// Directory to restore data from
+        ///
+        /// If omitted, the config file's 'archive' setting is used
+        directory: Option<PathBuf>,
+
+        /// User to connect as
+        ///
+        /// Restoring may require superuser privileges
+        user: Option<String>,
+    },
+
+    /// Start the web server
+    Serve {
+        #[arg(short, long)]
+        /// Run the server as a daemon process
+        daemon: bool,
+
+        #[arg(short, long, requires = "daemon")]
+        /// Path to the pidfile
+        pidfile: Option<PathBuf>,
+    },
 }
 
 fn main() -> ExitCode {
@@ -90,14 +115,14 @@ fn main() -> ExitCode {
         syslog.logopt = timber::syslog::LogOption::Pid;
     }
 
-    match || -> Result<()> {
+    match || -> Result {
         timber::new()
             .max_level(config.log.level)
             .sink(config.log.sink.clone())
             .init()
             .map_err(|err| format!("Failed to initialize logger: {err}"))?;
 
-        run(&args, &config, &mut parent)
+        run(&args, config, &mut parent)
     }() {
         Ok(()) => ExitCode::SUCCESS,
         Err(err) => {
@@ -128,32 +153,75 @@ fn version() -> Version {
     }
 }
 
+async fn store<F, Fut>(config: &Config, f: F) -> Result
+where
+    F: FnOnce(Arc<ObjectStore>) -> Fut,
+    Fut: Future<Output = Result>,
+{
+    store::start(version(), config, f).await
+}
+
 #[tokio::main]
 async fn run(
     args: &Cli,
-    config: &Config,
+    mut config: Config,
     parent: &mut dmon::Parent,
-) -> Result<()> {
-    let store = store::start(version(), config).await?;
+) -> Result {
+    match &args.command {
+        Command::Archive { directory } => {
+            if let Some(directory) = directory {
+                config.archive = Some(directory.clone());
+            }
 
-    match args.command {
-        Command::Serve { .. } => {
-            server::serve(&config.http, store.clone(), parent).await
+            store(&config, |store| async move {
+                store.archive().await?;
+                Ok(())
+            })
+            .await
         }
-        Command::Status => status(&store).await,
-    }?;
+        Command::Init { overwrite } => {
+            store(&config, |store| async move {
+                if *overwrite {
+                    store.reset().await?;
+                } else {
+                    store.init().await?;
+                }
+                Ok(())
+            })
+            .await
+        }
+        Command::Migrate => {
+            store(&config, |store| async move {
+                store.migrate().await?;
+                Ok(())
+            })
+            .await
+        }
+        Command::Restore { directory, user } => {
+            if let Some(user) = user {
+                config
+                    .database
+                    .connection
+                    .params_mut()
+                    .insert("user".into(), user.clone());
+            }
 
-    store.shutdown().await;
-    Ok(())
-}
+            let archive = match directory.as_ref().or(config.archive.as_ref()) {
+                Some(path) => Ok(path),
+                None => Err("no archive location specified"),
+            }?;
 
-async fn status(store: &ObjectStore) -> Result<()> {
-    let totals = store.get_totals().await?;
-
-    println!(
-        "Buckets: {}\nObjects: {}\nSpace used: {}",
-        totals.buckets, totals.objects, totals.space_used
-    );
-
-    Ok(())
+            store(&config, |store| async move {
+                store.restore(archive).await?;
+                Ok(())
+            })
+            .await
+        }
+        Command::Serve { .. } => {
+            store(&config, |store| async {
+                server::serve(&config.http, store, parent).await
+            })
+            .await
+        }
+    }
 }

@@ -1,18 +1,28 @@
 use axum_unix::Endpoint;
+use fstore_core::DatabaseConfig;
 use log::LevelFilter;
 use serde::{Deserialize, Serialize};
 use serde_yaml as yaml;
 use std::{
-    collections::HashMap,
     fs,
     path::{Path, PathBuf},
 };
 use timber::Sink;
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct Database {
-    pub connection: HashMap<String, String>,
-    pub max_connections: u32,
+pub struct Config {
+    pub archive: Option<PathBuf>,
+
+    pub database: DatabaseConfig,
+
+    pub home: PathBuf,
+
+    pub http: Http,
+
+    #[serde(default)]
+    pub log: Log,
+
+    pub user: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -24,6 +34,7 @@ pub struct Http {
 pub struct Log {
     #[serde(default = "Log::default_level")]
     pub level: LevelFilter,
+
     #[serde(default)]
     pub sink: Sink,
 }
@@ -41,16 +52,6 @@ impl Default for Log {
             sink: Default::default(),
         }
     }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Config {
-    pub database: Database,
-    pub home: PathBuf,
-    pub http: Http,
-    #[serde(default)]
-    pub log: Log,
-    pub user: Option<String>,
 }
 
 pub fn read(path: &Path) -> Result<Config, String> {

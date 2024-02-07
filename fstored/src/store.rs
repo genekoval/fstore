@@ -1,30 +1,34 @@
-use crate::conf::Config;
+use crate::{conf::Config, Result};
 
-use fstore_core::{Database, Filesystem, ObjectStore, Version};
-use sqlx::postgres::PgPoolOptions;
-use std::sync::Arc;
-use url::Url;
+use fstore_core::{ObjectStore, StoreOptions, Version};
+use std::{future::Future, sync::Arc};
 
-pub async fn start(
+pub async fn start<F, Fut>(
     version: Version,
-    config: &Config,
-) -> Result<Arc<ObjectStore>, String> {
-    let url =
-        Url::parse_with_params("postgresql://", &config.database.connection)
-            .map_err(|err| {
-                format!("Invalid database connection parameters: {err}")
-            })?;
+    Config {
+        archive,
+        database,
+        home,
+        ..
+    }: &Config,
+    f: F,
+) -> Result
+where
+    F: FnOnce(Arc<ObjectStore>) -> Fut,
+    Fut: Future<Output = Result>,
+{
+    let options = StoreOptions {
+        version,
+        database,
+        home: home.as_path(),
+        archive,
+    };
 
-    let pool = PgPoolOptions::new()
-        .max_connections(config.database.max_connections)
-        .connect(url.as_str())
-        .await
-        .map_err(|err| {
-            format!("Failed to establish database connection: {err}")
-        })?;
+    let store = Arc::new(ObjectStore::new(options).await?);
 
-    let db = Database::new(pool);
-    let fs = Filesystem::new(&config.home);
+    let result = f(store.clone()).await;
 
-    Ok(Arc::new(ObjectStore::new(version, db, fs)))
+    store.shutdown().await;
+
+    result
 }

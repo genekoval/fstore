@@ -101,6 +101,7 @@ impl Filesystem {
         }
     }
 
+    #[allow(dead_code)]
     pub async fn check(
         &self,
         object_id: &Uuid,
