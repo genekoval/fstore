@@ -1,12 +1,14 @@
 use chrono::{DateTime, Local};
-use sqlx::{Encode, Postgres};
+use sqlx::postgres::{PgHasArrayType, PgTypeInfo};
 use uuid::Uuid;
+
+pub type Timestamp = DateTime<Local>;
 
 #[derive(Debug, sqlx::FromRow)]
 pub struct Bucket {
     pub bucket_id: Uuid,
     pub name: String,
-    pub date_created: DateTime<Local>,
+    pub date_created: Timestamp,
     pub object_count: i64,
     pub space_used: i64,
 }
@@ -30,7 +32,7 @@ pub struct Object {
     pub size: i64,
     pub r#type: String,
     pub subtype: String,
-    pub date_added: DateTime<Local>,
+    pub date_added: Timestamp,
 }
 
 impl From<Object> for fstore::Object {
@@ -78,10 +80,17 @@ impl From<StoreTotals> for fstore::StoreTotals {
     }
 }
 
-#[derive(Debug, sqlx::FromRow)]
+#[derive(Debug, sqlx::FromRow, sqlx::Type)]
+#[sqlx(type_name = "object_error")]
 pub struct ObjectError {
     pub object_id: Uuid,
     pub message: String,
+}
+
+impl PgHasArrayType for ObjectError {
+    fn array_type_info() -> sqlx::postgres::PgTypeInfo {
+        PgTypeInfo::with_name("_object_error")
+    }
 }
 
 impl From<ObjectError> for fstore::ObjectError {
@@ -90,70 +99,5 @@ impl From<ObjectError> for fstore::ObjectError {
             object_id: value.object_id,
             message: value.message,
         }
-    }
-}
-
-impl sqlx::Type<Postgres> for ObjectError {
-    fn type_info() -> sqlx::postgres::PgTypeInfo {
-        sqlx::postgres::PgTypeInfo::with_name("object_error")
-    }
-}
-
-impl<'r> sqlx::Decode<'r, Postgres> for ObjectError {
-    fn decode(
-        value: sqlx::postgres::PgValueRef<'r>,
-    ) -> Result<Self, Box<dyn std::error::Error + 'static + Send + Sync>> {
-        let mut decoder = sqlx::postgres::types::PgRecordDecoder::new(value)?;
-
-        let object_id = decoder.try_decode::<Uuid>()?;
-        let message = decoder.try_decode::<String>()?;
-
-        Ok(Self { object_id, message })
-    }
-}
-
-impl<'r> sqlx::Encode<'r, Postgres> for ObjectError {
-    fn encode_by_ref(
-        &self,
-        buf: &mut <Postgres as sqlx::database::HasArguments<'r>>::ArgumentBuffer,
-    ) -> sqlx::encode::IsNull {
-        let _ = self.object_id.encode_by_ref(buf);
-        <std::string::String as Encode<'_, Postgres>>::encode_by_ref(
-            &self.message,
-            buf,
-        )
-    }
-}
-
-pub struct ObjectErrorSlice<'a>(&'a [ObjectError]);
-
-impl<'a> sqlx::Type<Postgres> for ObjectErrorSlice<'a> {
-    fn type_info() -> sqlx::postgres::PgTypeInfo {
-        sqlx::postgres::PgTypeInfo::with_name("_object_error")
-    }
-}
-
-impl<'r> sqlx::Encode<'r, Postgres> for ObjectErrorSlice<'r> {
-    fn encode_by_ref(
-        &self,
-        buf: &mut sqlx::postgres::PgArgumentBuffer,
-    ) -> sqlx::encode::IsNull {
-        self.0.encode(buf)
-    }
-}
-
-pub struct ObjectErrorVec(Vec<ObjectError>);
-
-impl sqlx::Type<Postgres> for ObjectErrorVec {
-    fn type_info() -> sqlx::postgres::PgTypeInfo {
-        sqlx::postgres::PgTypeInfo::with_name("_object_error")
-    }
-}
-
-impl<'r> sqlx::Decode<'r, Postgres> for ObjectErrorVec {
-    fn decode(
-        value: sqlx::postgres::PgValueRef<'r>,
-    ) -> Result<Self, Box<dyn std::error::Error + 'static + Send + Sync>> {
-        Ok(Self(Vec::<ObjectError>::decode(value)?))
     }
 }

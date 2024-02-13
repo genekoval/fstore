@@ -9,17 +9,25 @@ axum = "0.7"
 axum-extra = { version = "0.9", features = ["async-read-body", "typed-header"] }
 axum-unix = { path = "../axum-unix", features = ["serde"] }
 clap = { workspace = true, features = ["derive", "env"] }
+crossterm = "0.27"
 dmon = { path = "../dmon" }
 fstore = { path = "../fstore" }
 fstore-core = { path = "../fstore-core" }
 log = { workspace = true, features = ["serde"] }
 mime = "0.3"
+ratatui = "0.26"
 serde = { workspace = true }
 serde_yaml = { workspace = true }
 shadow-rs = { workspace = true }
 sqlx = { workspace = true, features = ["postgres"] }
 timber = { path = "../timber", features = ["serde"] }
-tokio = { workspace = true, features = ["macros", "rt-multi-thread", "signal"] }
+tokio = { workspace = true, features = [
+    "macros",
+    "rt-multi-thread",
+    "signal",
+    "time",
+] }
+tokio-util = { workspace = true }
 url = "2"
 uuid = { workspace = true }
 

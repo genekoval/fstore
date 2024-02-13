@@ -6,7 +6,7 @@ use tokio::task;
 
 pub async fn sha256sum(path: &Path) -> Result<String> {
     let buf = path.to_path_buf();
-    task::spawn_blocking(move || sha256sum_sync(&buf))
+    task::spawn_blocking(move || sha256sum_blocking(&buf))
         .await
         .map_err(|err| {
             Error::Internal(format!(
@@ -16,7 +16,7 @@ pub async fn sha256sum(path: &Path) -> Result<String> {
         })?
 }
 
-fn sha256sum_sync(path: &Path) -> Result<String> {
+fn sha256sum_blocking(path: &Path) -> Result<String> {
     let mut file = match File::open(path) {
         Ok(file) => file,
         Err(err) => internal!(

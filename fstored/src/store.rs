@@ -6,9 +6,9 @@ use std::{future::Future, sync::Arc};
 pub async fn start<F, Fut>(
     version: Version,
     Config {
-        archive,
         database,
         home,
+        archive,
         ..
     }: &Config,
     f: F,

@@ -2,6 +2,7 @@ mod model;
 
 pub use model::*;
 
+use futures::stream::BoxStream;
 use sql_helper_macros::{database, transaction};
 use uuid::Uuid;
 
@@ -27,6 +28,10 @@ database! {
 
     get_object(bucket_id: &Uuid, object_id: &Uuid) -> Option<Object>;
 
+    get_object_count(before: Timestamp) -> (i64,);
+
+    stream_objects(before: Timestamp) -> BoxStream<Object>;
+
     remove_bucket(bucket_id: &Uuid);
 
     remove_object(bucket_id: &Uuid, object_id: &Uuid) -> Option<Object>;
@@ -35,7 +40,7 @@ database! {
 
     rename_bucket(bucket_id: &Uuid, name: &str);
 
-    update_object_errors<'a>(records: ObjectErrorSlice<'a>);
+    update_object_errors(records: &[ObjectError]);
 }
 
 transaction! {

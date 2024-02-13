@@ -1,6 +1,7 @@
 mod file_type;
 mod hash;
 mod part;
+mod rm;
 
 pub use part::Part;
 pub use tokio::fs::File;
@@ -10,19 +11,39 @@ use part::PartLockSet;
 
 use crate::error::{Error, Result};
 
-use log::{debug, error};
+use log::debug;
 use std::{
     fs,
-    io::ErrorKind,
     os::unix::fs::PermissionsExt,
     path::{Path, PathBuf},
+    result,
 };
 use uuid::Uuid;
+
+const ID_SLICE_SIZE: usize = 2;
+const ID_SLICES: usize = 2;
 
 const OBJECTS_DIR: &str = "objects";
 const PARTS_DIR: &str = "parts";
 
 const OBJECT_PERMISSIONS: u32 = 0o640;
+
+async fn check(path: &Path, hash: &str) -> result::Result<(), String> {
+    if !path.exists() {
+        return Err(format!("file '{}' does not exist", path.display()));
+    }
+
+    match hash::sha256sum(path).await {
+        Ok(result) => {
+            if result == hash {
+                Ok(())
+            } else {
+                Err(format!("hash mismatch: {result}"))
+            }
+        }
+        Err(err) => Err(err.to_string()),
+    }
+}
 
 fn create_directories(file: &Path) -> Result<()> {
     let parent = file.parent().ok_or_else(|| {
@@ -44,8 +65,6 @@ fn create_directories(file: &Path) -> Result<()> {
 }
 
 fn path_for_id(parent: &Path, id: &Uuid) -> PathBuf {
-    const ID_SLICE_SIZE: usize = 2;
-    const ID_SLICES: usize = 2;
     const CAPACITY: usize = ID_SLICE_SIZE * ID_SLICES + // Space for ID slices
         1 + ID_SLICES + // Space for separators
         36; // Space for ID
@@ -64,16 +83,6 @@ fn path_for_id(parent: &Path, id: &Uuid) -> PathBuf {
     result.push(id);
 
     result
-}
-
-fn remove(path: PathBuf) {
-    match fs::remove_file(&path) {
-        Ok(()) => debug!("Removed file '{}'", path.display()),
-        Err(err) => match err.kind() {
-            ErrorKind::NotFound => (),
-            _ => error!("Failed to remove file '{}': {}", path.display(), err),
-        },
-    };
 }
 
 #[derive(Debug)]
@@ -101,24 +110,13 @@ impl Filesystem {
         }
     }
 
-    #[allow(dead_code)]
     pub async fn check(
         &self,
         object_id: &Uuid,
         hash: &str,
-    ) -> core::result::Result<(), String> {
+    ) -> result::Result<(), String> {
         let path = self.object_path(object_id);
-
-        match hash::sha256sum(&path).await {
-            Ok(result) => {
-                if result == hash {
-                    Ok(())
-                } else {
-                    Err(format!("hash mismatch: {result}"))
-                }
-            }
-            Err(err) => Err(err.to_string()),
-        }
+        check(&path, hash).await
     }
 
     pub async fn commit(&self, part_id: &Uuid) -> Result<Object> {
@@ -142,6 +140,41 @@ impl Filesystem {
             r#type,
             subtype,
         })
+    }
+
+    pub async fn copy(
+        &self,
+        object_id: &Uuid,
+        destination: &Path,
+        hash: &str,
+    ) -> result::Result<(), String> {
+        let objects = destination.join(OBJECTS_DIR);
+        let destination = path_for_id(&objects, object_id);
+
+        match check(&destination, hash).await {
+            Ok(()) => return Ok(()),
+            Err(err) => debug!(
+                "Copying object ({object_id}) to '{}': {err}",
+                destination.display()
+            ),
+        }
+
+        let source = self.object_path(object_id);
+
+        create_directories(&destination)
+            .map_err(|err| format!("failed to copy object file: {err}"))?;
+
+        tokio::fs::copy(&source, &destination)
+            .await
+            .map_err(|err| {
+                format!(
+                    "failed to copy object file from '{}' to '{}': {err}",
+                    source.display(),
+                    destination.display()
+                )
+            })?;
+
+        Ok(())
     }
 
     fn move_part(&self, part_id: &Uuid) -> Result<PathBuf> {
@@ -185,7 +218,16 @@ impl Filesystem {
         path_for_id(&self.parts, id)
     }
 
-    pub fn remove_object(&self, id: &Uuid) {
-        remove(self.object_path(id));
+    pub async fn remove_extraneous(&self, dest: &Path) -> Result<()> {
+        let dest = dest.join(OBJECTS_DIR);
+        rm::remove_extraneous(&self.objects, &dest).await
+    }
+
+    pub async fn remove_objects<'a, I>(&self, objects: I) -> Result<()>
+    where
+        I: Iterator<Item = &'a Uuid>,
+    {
+        let paths = objects.map(|id| self.object_path(id)).collect();
+        rm::remove_files(paths).await
     }
 }

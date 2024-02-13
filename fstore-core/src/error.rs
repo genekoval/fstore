@@ -9,6 +9,9 @@ pub enum Error {
     #[error("{0}")]
     Internal(String),
 
+    #[error("task already in progress")]
+    InProgress,
+
     #[error("{0} not found")]
     NotFound(&'static str),
 }

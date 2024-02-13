@@ -1,3 +1,7 @@
+mod progress;
+
+use progress::ProgressBarTask;
+
 use fstored::{
     conf::{self, Config},
     server, store, ObjectStore, Result,
@@ -47,6 +51,17 @@ enum Command {
         ///
         /// If omitted, the config file's 'archive' setting is used
         directory: Option<PathBuf>,
+
+        #[arg(short, long)]
+        /// Do not show progress
+        quiet: bool,
+    },
+
+    /// Check integrity of objects
+    Check {
+        #[arg(short, long)]
+        /// Do not show progress
+        quiet: bool,
     },
 
     /// Initialize the database
@@ -168,13 +183,117 @@ async fn run(
     parent: &mut dmon::Parent,
 ) -> Result {
     match &args.command {
-        Command::Archive { directory } => {
-            if let Some(directory) = directory {
-                config.archive = Some(directory.clone());
+        Command::Archive { directory, quiet } => {
+            if let Some(archive) = directory {
+                config.archive = Some(archive.clone());
             }
 
             store(&config, |store| async move {
-                store.archive().await?;
+                let progress = store.archive().await?;
+
+                let bar = if *quiet {
+                    None
+                } else {
+                    let total = progress.total();
+                    let title = format!(
+                        "Syncing {} object{} with archive",
+                        total,
+                        match total {
+                            1 => "",
+                            _ => "s",
+                        }
+                    );
+
+                    Some(ProgressBarTask::new(title, progress.clone()))
+                };
+
+                let success = progress.finished().await;
+
+                if let Some(bar) = bar {
+                    bar.cancel().await;
+                }
+
+                if success {
+                    let completed = progress.completed();
+                    let errors = progress.errors();
+
+                    println!(
+                        "Synced {} object{} with archive{}",
+                        completed,
+                        match completed {
+                            1 => "",
+                            _ => "s",
+                        },
+                        match errors {
+                            0 => "".into(),
+                            _ => format!(
+                                " ({} error{})",
+                                errors,
+                                match errors {
+                                    1 => "",
+                                    _ => "s",
+                                }
+                            ),
+                        }
+                    );
+                }
+
+                Ok(())
+            })
+            .await
+        }
+        Command::Check { quiet } => {
+            store(&config, |store| async move {
+                let progress = store.check().await?;
+
+                let bar = if *quiet {
+                    None
+                } else {
+                    let total = progress.total();
+                    let title = format!(
+                        "Checking {} object{}...",
+                        total,
+                        match total {
+                            1 => "",
+                            _ => "s",
+                        }
+                    );
+
+                    Some(ProgressBarTask::new(title, progress.clone()))
+                };
+
+                let success = progress.finished().await;
+
+                if let Some(bar) = bar {
+                    bar.cancel().await;
+                }
+
+                if success {
+                    let completed = progress.completed();
+                    let errors = progress.errors();
+
+                    println!(
+                        "Checked {} object{} in {}s: {}",
+                        completed,
+                        match completed {
+                            1 => "",
+                            _ => "s",
+                        },
+                        progress.elapsed().num_seconds(),
+                        match errors {
+                            0 => "all valid".into(),
+                            _ => format!(
+                                "{} error{}",
+                                errors,
+                                match errors {
+                                    1 => "",
+                                    _ => "s",
+                                }
+                            ),
+                        }
+                    );
+                }
+
                 Ok(())
             })
             .await

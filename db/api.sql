@@ -219,12 +219,22 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE FUNCTION get_objects() RETURNS SETOF object AS $$
+CREATE FUNCTION get_object_count(before timestamptz) RETURNS SETOF bigint AS $$
+BEGIN
+    RETURN QUERY
+    SELECT count(*)
+    FROM object
+    WHERE date_added < before;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE FUNCTION stream_objects(before timestamptz) RETURNS SETOF object AS $$
 BEGIN
     RETURN QUERY
     SELECT *
     FROM object
-    ORDER BY object_id;
+    WHERE date_added < before
+    ORDER BY date_added DESC;
 END;
 $$ LANGUAGE plpgsql;
 

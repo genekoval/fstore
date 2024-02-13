@@ -12,6 +12,7 @@ futures = "0.3"
 libc = "0.2"
 log = { workspace = true }
 magic = "0.16"
+num_cpus = "1"
 pgtools = { path = "../pgtools" }
 sha2 = "0.10"
 serde = { workspace = true }
@@ -24,7 +25,8 @@ sqlx = { workspace = true, features = [
     "uuid",
 ] }
 thiserror = { workspace = true }
-tokio = { workspace = true, features = ["fs"] }
-tokio-util = "0.7"
+tokio = { workspace = true, features = ["fs", "sync"] }
+tokio-util = { workspace = true, features = ["io"] }
 time = { workspace = true }
 uuid = { workspace = true, features = ["v4"] }
+walkdir = "2"

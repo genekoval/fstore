@@ -2,6 +2,7 @@ mod db;
 mod error;
 mod fs;
 mod model;
+mod progress;
 
 pub use pgtools::{
     ConnectionParameters as DbConnection, Database as DbSupport,
@@ -10,23 +11,31 @@ pub use pgtools::{
 pub use error::Error;
 pub use fs::{File, Part};
 pub use model::*;
+pub use progress::Progress;
 
 pub use sqlx::postgres::PgPoolOptions as DbPoolOptions;
 use sqlx::postgres::PgPoolOptions;
 
-use crate::{
-    db::Database,
-    error::{OptionNotFound, Result},
-    fs::Filesystem,
-};
+use db::Database;
+use error::{OptionNotFound, Result};
+use fs::Filesystem;
 
+use chrono::{DateTime, Local};
 use fstore::{Bucket, Object, ObjectError, RemoveResult, StoreTotals};
-use log::info;
+use futures::stream::StreamExt;
+use log::{error, info, trace};
 use pgtools::{PgDump, PgRestore, Psql};
+use progress::{ProgressGuard, Task};
 use serde::{Deserialize, Serialize};
 use std::{
+    future::Future,
     path::{Path, PathBuf},
     result,
+    sync::Arc,
+};
+use tokio::{
+    sync::{watch, Semaphore},
+    task,
 };
 use uuid::Uuid;
 
@@ -58,7 +67,65 @@ pub struct StoreOptions<'a> {
     pub archive: &'a Option<PathBuf>,
 }
 
+trait ObjectStreamAction: Clone + Send + Sync + 'static {
+    fn run(
+        &self,
+        store: &ObjectStore,
+        object: &db::Object,
+    ) -> impl Future<Output = result::Result<(), String>> + Send;
+}
+
+#[derive(Clone, Copy, Debug)]
+struct CheckAction;
+
+impl ObjectStreamAction for CheckAction {
+    async fn run(
+        &self,
+        store: &ObjectStore,
+        object: &db::Object,
+    ) -> result::Result<(), String> {
+        store
+            .filesystem
+            .check(&object.object_id, &object.hash)
+            .await
+    }
+}
+
+#[derive(Clone, Debug)]
+struct SyncAction {
+    archive: Arc<PathBuf>,
+}
+
+impl SyncAction {
+    fn new(path: &Path) -> Self {
+        Self {
+            archive: Arc::new(path.to_owned()),
+        }
+    }
+}
+
+impl ObjectStreamAction for SyncAction {
+    async fn run(
+        &self,
+        store: &ObjectStore,
+        object: &db::Object,
+    ) -> result::Result<(), String> {
+        store
+            .filesystem
+            .copy(&object.object_id, self.archive.as_path(), &object.hash)
+            .await
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct Tasks {
+    pub archive: Task,
+    pub check: Task,
+}
+
 pub struct ObjectStore {
+    pub tasks: Tasks,
+
     about: About,
     database: Database,
     db_support: DbSupport,
@@ -105,6 +172,7 @@ impl ObjectStore {
             db_support,
             filesystem: Filesystem::new(home),
             archive: archive.clone(),
+            tasks: Default::default(),
         })
     }
 
@@ -114,17 +182,51 @@ impl ObjectStore {
         Ok(())
     }
 
-    pub async fn archive(&self) -> result::Result<(), String> {
-        let archive = self
-            .archive
-            .as_deref()
-            .ok_or_else(|| String::from("no archive location specified"))?
-            .join(DATABASE_DUMP_FILENAME);
+    pub async fn archive(self: Arc<Self>) -> Result<Progress> {
+        let archive = self.archive.as_deref().ok_or_else(|| {
+            Error::Internal("archive location not specified".into())
+        })?;
+
+        let started = Local::now();
+        let total = self.get_object_count(started).await?;
+        let guard =
+            ProgressGuard::new(started, total, self.tasks.archive.clone())?;
+
+        tokio::fs::create_dir_all(archive).await.map_err(|err| {
+            Error::Internal(format!(
+                "Failed to create archive directory '{}': {err}",
+                archive.display()
+            ))
+        })?;
 
         let dump = archive.join(DATABASE_DUMP_FILENAME);
-        self.db_support.dump(&dump).await?;
+        self.db_support.dump(&dump).await.map_err(Error::Internal)?;
 
-        Ok(())
+        self.filesystem.remove_extraneous(archive).await?;
+
+        let progress = guard.clone();
+        let action = SyncAction::new(archive);
+
+        task::spawn(async move {
+            self.for_each_object(guard, action).await;
+        });
+
+        Ok(progress)
+    }
+
+    pub async fn check(self: Arc<Self>) -> Result<Progress> {
+        let started = Local::now();
+        let total = self.get_object_count(started).await?;
+        let guard =
+            ProgressGuard::new(started, total, self.tasks.check.clone())?;
+
+        let progress = guard.clone();
+
+        task::spawn(async move {
+            self.for_each_object(guard, CheckAction).await;
+        });
+
+        Ok(progress)
     }
 
     pub async fn init(&self) -> result::Result<(), String> {
@@ -233,9 +335,9 @@ impl ObjectStore {
         let mut tx = self.database.begin().await?;
         let objects = tx.remove_orphan_objects().await?;
 
-        for object in &objects {
-            self.filesystem.remove_object(&object.object_id);
-        }
+        self.filesystem
+            .remove_objects(objects.iter().map(|obj| &obj.object_id))
+            .await?;
 
         tx.commit().await?;
 
@@ -248,7 +350,7 @@ impl ObjectStore {
             }
         );
 
-        Ok(objects.into_iter().map(|object| object.into()).collect())
+        Ok(objects.into_iter().map(|obj| obj.into()).collect())
     }
 
     pub async fn remove_bucket(&self, bucket_id: &Uuid) -> Result<()> {
@@ -289,5 +391,79 @@ impl ObjectStore {
 
     pub async fn shutdown(&self) {
         self.database.close().await
+    }
+
+    async fn get_object_count(&self, start: DateTime<Local>) -> Result<u64> {
+        let total = self
+            .database
+            .get_object_count(start)
+            .await
+            .map_err(|err| {
+                Error::Internal(format!("failed to fetch object count: {err}"))
+            })?
+            .0
+            .try_into()
+            .unwrap();
+
+        Ok(total)
+    }
+
+    async fn for_each_object(
+        self: Arc<Self>,
+        progress: ProgressGuard,
+        action: impl ObjectStreamAction,
+    ) {
+        let (tx, rx) = watch::channel(());
+        let semaphore = Arc::new(Semaphore::new(num_cpus::get()));
+        let mut stream = self.database.stream_objects(progress.started());
+
+        while let Some(object) = stream.next().await {
+            let object = match object {
+                Ok(object) => object,
+                Err(err) => {
+                    error!("Failed to fetch object from database: {err}");
+                    return;
+                }
+            };
+
+            let permit = semaphore.clone().acquire_owned().await.unwrap();
+            let store = self.clone();
+            let progress = progress.clone();
+            let rx = rx.clone();
+            let action = action.clone();
+
+            task::spawn(async move {
+                let messages = match action.run(&store, &object).await {
+                    Ok(()) => progress.clear_error(object.object_id),
+                    Err(message) => progress.error(object.object_id, message),
+                };
+
+                progress.increment();
+                drop(permit);
+
+                if !messages.is_empty() {
+                    if let Err(err) =
+                        store.database.update_object_errors(&messages).await
+                    {
+                        error!("failed to update object errors: {err}");
+                    }
+                }
+
+                trace!("Processed object {}", object.object_id);
+                drop(rx);
+            });
+        }
+
+        drop(rx);
+        tx.closed().await;
+
+        let messages = progress.messages();
+        if !messages.is_empty() {
+            if let Err(err) =
+                self.database.update_object_errors(&messages).await
+            {
+                error!("failed to update object errors: {err}");
+            }
+        }
     }
 }
