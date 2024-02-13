@@ -130,28 +130,29 @@ fn main() -> ExitCode {
         syslog.logopt = timber::syslog::LogOption::Pid;
     }
 
-    match || -> Result {
+    let run = || {
         timber::new()
             .max_level(config.log.level)
             .sink(config.log.sink.clone())
             .init()
             .map_err(|err| format!("Failed to initialize logger: {err}"))?;
 
-        run(&args, config, &mut parent)
-    }() {
-        Ok(()) => ExitCode::SUCCESS,
-        Err(err) => {
-            error!("{err}");
+        run_async(&args, config, &mut parent)
+    };
 
-            if parent.is_waiting() {
-                if let Err(write_error) = parent.write(&format!("{err}")) {
-                    error!("Failed to write to parent process: {write_error}");
-                }
+    if let Err(err) = run() {
+        error!("{err}");
+
+        if parent.is_waiting() {
+            if let Err(write_error) = parent.write(&format!("{err}")) {
+                error!("Failed to write to parent process: {write_error}");
             }
-
-            ExitCode::FAILURE
         }
+
+        return ExitCode::FAILURE;
     }
+
+    ExitCode::SUCCESS
 }
 
 fn version() -> Version {
@@ -177,7 +178,7 @@ where
 }
 
 #[tokio::main]
-async fn run(
+async fn run_async(
     args: &Cli,
     mut config: Config,
     parent: &mut dmon::Parent,
