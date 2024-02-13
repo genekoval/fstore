@@ -288,7 +288,11 @@ impl ObjectStore {
             .collect())
     }
 
-    pub async fn get_errors(&self) -> Result<Vec<ObjectError>> {
+    pub async fn get_object(&self, object_id: &Uuid) -> Result<File> {
+        self.filesystem.object(object_id).await
+    }
+
+    pub async fn get_object_errors(&self) -> Result<Vec<ObjectError>> {
         Ok(self
             .database
             .get_errors()
@@ -296,10 +300,6 @@ impl ObjectStore {
             .into_iter()
             .map(|errors| errors.into())
             .collect())
-    }
-
-    pub async fn get_object(&self, object_id: &Uuid) -> Result<File> {
-        self.filesystem.object(object_id).await
     }
 
     pub async fn get_object_metadata(

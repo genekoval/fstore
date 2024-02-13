@@ -11,7 +11,7 @@ use axum::{
     Json, Router,
 };
 use axum_extra::{body::AsyncReadBody, headers::ContentLength, TypedHeader};
-use fstore::{Bucket, Object, RemoveResult, StoreTotals};
+use fstore::{Bucket, Object, ObjectError, RemoveResult, StoreTotals};
 use fstore_core::About;
 use mime::Mime;
 use serde::Serialize;
@@ -210,6 +210,12 @@ async fn get_object_data(
     Ok((headers, body).into_response())
 }
 
+async fn get_object_errors(
+    State(AppState { store }): State<AppState>,
+) -> Result<Json<Vec<ObjectError>>> {
+    Ok(Json(store.get_object_errors().await?))
+}
+
 async fn get_object_metadata(
     State(AppState { store }): State<AppState>,
     Path((bucket_id, object_id)): Path<(Uuid, Uuid)>,
@@ -300,6 +306,7 @@ pub fn routes() -> Router<AppState> {
                 .delete(remove_object),
         )
         .route("/object/:bucket/:object/data", get(get_object_data))
+        .route("/object/errors", get(get_object_errors))
         .route("/objects", delete(prune))
         .route("/status", get(status))
 }

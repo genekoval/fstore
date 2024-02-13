@@ -63,6 +63,9 @@ enum Command {
     /// List all buckets
     Buckets,
 
+    /// List object errors
+    Errors,
+
     /// Stream an object's contents
     Get {
         /// Bucket UUID
@@ -259,6 +262,7 @@ async fn run(command: Command, config: Config, client: Client) -> Result {
             }
         },
         Command::Buckets => client.get_buckets().await,
+        Command::Errors => client.get_object_errors().await,
         Command::Get {
             bucket,
             object,

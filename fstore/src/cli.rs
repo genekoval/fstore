@@ -3,7 +3,7 @@ use crate::{
     print::{DiskUsage, Output, Print, Tabulate},
 };
 
-use fstore::http;
+use fstore::{http, ObjectError};
 use std::{error::Error, path::PathBuf, result};
 use tokio::{
     fs::File,
@@ -121,6 +121,26 @@ impl Client {
                 )?;
             }
         }
+
+        Ok(())
+    }
+
+    pub async fn get_object_errors(&self) -> Result {
+        let errors = self.client.get_object_errors().await?;
+
+        for ObjectError { object_id, message } in &errors {
+            println!("{object_id}");
+            println!("\t{message}");
+        }
+
+        println!(
+            "{} object error{}",
+            errors.len(),
+            match errors.len() {
+                1 => "",
+                _ => "s",
+            }
+        );
 
         Ok(())
     }

@@ -1,6 +1,6 @@
 use crate::{
     error::{Error, ErrorKind, Result},
-    model, About, Object, RemoveResult, StoreTotals,
+    model, About, Object, ObjectError, RemoveResult, StoreTotals,
 };
 
 use bytes::Bytes;
@@ -153,6 +153,16 @@ impl Client {
                 &bucket.to_string(),
                 &object.to_string(),
             ]))
+            .send_and_check()
+            .await?
+            .json()
+            .await?)
+    }
+
+    pub async fn get_object_errors(&self) -> Result<Vec<ObjectError>> {
+        Ok(self
+            .client
+            .get(self.path(&["object", "errors"]))
             .send_and_check()
             .await?
             .json()
