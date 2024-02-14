@@ -13,7 +13,6 @@ libc = "0.2"
 log = { workspace = true }
 magic = "0.16"
 num_cpus = "1"
-pgtools = { path = "../pgtools" }
 sha2 = "0.10"
 serde = { workspace = true }
 sqlx = { workspace = true, features = [
@@ -29,6 +28,9 @@ tokio-util = { workspace = true, features = ["io"] }
 time = { workspace = true }
 uuid = { workspace = true, features = ["v4"] }
 walkdir = "2"
+
+[dependencies.pgtools]
+git = "https://git.aurora.aur/genya/pgtools.git"
 
 [dependencies.sqlx-helper-macros]
 git = "https://git.aurora.aur/genya/sqlx-helper-macros.git"
