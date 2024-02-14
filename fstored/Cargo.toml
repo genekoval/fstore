@@ -9,7 +9,6 @@ axum = "0.7"
 axum-extra = { version = "0.9", features = ["async-read-body", "typed-header"] }
 clap = { workspace = true, features = ["derive", "env"] }
 crossterm = "0.27"
-dmon = { path = "../dmon" }
 fstore = { path = "../fstore" }
 fstore-core = { path = "../fstore-core" }
 log = { workspace = true, features = ["serde"] }
@@ -33,6 +32,9 @@ uuid = { workspace = true }
 [dependencies.axum-unix]
 git = "https://git.aurora.aur/genya/axum-unix.git"
 features = ["serde"]
+
+[dependencies.dmon]
+git = "https://git.aurora.aur/genya/dmon-rs.git"
 
 [build-dependencies]
 shadow-rs = { workspace = true }
