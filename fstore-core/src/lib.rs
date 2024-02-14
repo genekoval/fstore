@@ -401,7 +401,6 @@ impl ObjectStore {
             .map_err(|err| {
                 Error::Internal(format!("failed to fetch object count: {err}"))
             })?
-            .0
             .try_into()
             .unwrap();
 
