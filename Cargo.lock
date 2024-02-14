@@ -232,6 +232,7 @@ dependencies = [
 [[package]]
 name = "axum-unix"
 version = "0.1.0"
+source = "git+https://git.aurora.aur/genya/axum-unix.git#666df7ef0b5e914f75181d3f875814183d766e1c"
 dependencies = [
  "axum",
  "futures-util",

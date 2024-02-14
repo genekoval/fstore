@@ -7,7 +7,6 @@ build = "build.rs"
 [dependencies]
 axum = "0.7"
 axum-extra = { version = "0.9", features = ["async-read-body", "typed-header"] }
-axum-unix = { path = "../axum-unix", features = ["serde"] }
 clap = { workspace = true, features = ["derive", "env"] }
 crossterm = "0.27"
 dmon = { path = "../dmon" }
@@ -30,6 +29,10 @@ tokio = { workspace = true, features = [
 tokio-util = { workspace = true }
 url = "2"
 uuid = { workspace = true }
+
+[dependencies.axum-unix]
+git = "https://git.aurora.aur/genya/axum-unix.git"
+features = ["serde"]
 
 [build-dependencies]
 shadow-rs = { workspace = true }

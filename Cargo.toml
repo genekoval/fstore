@@ -1,7 +1,6 @@
 [workspace]
 resolver = "2"
 members = [
-    "axum-unix",
     "dmon",
     "fstore",
     "fstore-core",
