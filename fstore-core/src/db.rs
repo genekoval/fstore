@@ -2,7 +2,7 @@ mod model;
 
 pub use model::*;
 
-use sql_helper_macros::{database, transaction};
+use sqlx_helper_macros::{database, transaction};
 use uuid::Uuid;
 
 database! {

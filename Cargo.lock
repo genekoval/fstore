@@ -800,8 +800,8 @@ dependencies = [
  "pgtools",
  "serde",
  "sha2",
- "sql-helper-macros",
  "sqlx",
+ "sqlx-helper-macros",
  "thiserror",
  "time",
  "tokio",
@@ -2353,15 +2353,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sql-helper-macros"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.48",
-]
-
-[[package]]
 name = "sqlformat"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2425,6 +2416,16 @@ dependencies = [
  "tracing",
  "url",
  "uuid",
+]
+
+[[package]]
+name = "sqlx-helper-macros"
+version = "0.1.0"
+source = "git+https://git.aurora.aur/genya/sqlx-helper-macros.git#03b52adeccc06e144e2051b1415cabbb544a2013"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.48",
 ]
 
 [[package]]
