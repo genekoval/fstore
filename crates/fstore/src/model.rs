@@ -1,6 +1,9 @@
-use chrono::{DateTime, Local};
+pub use uuid::Uuid;
+
+use chrono::Local;
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
+
+pub type DateTime = chrono::DateTime<Local>;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct About {
@@ -24,7 +27,7 @@ pub struct Version {
 pub struct Bucket {
     pub id: Uuid,
     pub name: String,
-    pub created: DateTime<Local>,
+    pub created: DateTime,
     pub object_count: u64,
     pub space_used: u64,
 }
@@ -36,7 +39,7 @@ pub struct Object {
     pub size: u64,
     pub r#type: String,
     pub subtype: String,
-    pub added: DateTime<Local>,
+    pub added: DateTime,
 }
 
 impl Object {

@@ -3,14 +3,13 @@ use crate::{
     print::{DiskUsage, Output, Print, Tabulate},
 };
 
-use fstore::{http, ObjectError};
+use fstore::{http, ObjectError, Uuid};
 use std::{error::Error, path::PathBuf, result};
 use tokio::{
     fs::File,
     io::{stdin, stdout},
 };
 use tokio_util::io::StreamReader;
-use uuid::Uuid;
 
 pub type BoxError = Box<dyn Error + Send + Sync + 'static>;
 pub type Result = result::Result<(), BoxError>;

@@ -1,18 +1,18 @@
-mod cli;
+mod client;
 mod conf;
 mod print;
 
-use cli::{Client, Result};
+use client::{Client, Result};
 use conf::Config;
 use print::Output;
 
 use clap::{Args, Parser, Subcommand};
+use fstore::Uuid;
 use std::{
     env,
     path::{Path, PathBuf},
     process::ExitCode,
 };
-use uuid::Uuid;
 
 #[derive(Debug, Parser)]
 #[command(version, arg_required_else_help = true)]
@@ -245,8 +245,21 @@ fn main() -> ExitCode {
     }
 }
 
-#[tokio::main(flavor = "current_thread")]
-async fn run(command: Command, config: Config, client: Client) -> Result {
+fn run(command: Command, config: Config, client: Client) -> Result {
+    let body = async move { run_command(command, config, client).await };
+
+    tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .map_err(|err| format!("failed to build runtime: {err}"))?
+        .block_on(body)
+}
+
+async fn run_command(
+    command: Command,
+    config: Config,
+    client: Client,
+) -> Result {
     match command {
         Command::About => client.about().await,
         Command::Add { bucket, file } => match file {

@@ -1,6 +1,5 @@
-use chrono::{DateTime, Local};
 use chrono_humanize::{Accuracy, HumanTime, Tense};
-use fstore::{Bucket, Object, StoreTotals};
+use fstore::{Bucket, DateTime, Object, StoreTotals};
 use log::debug;
 use num_format::{SystemLocale, ToFormattedString};
 use serde::Serialize;
@@ -26,7 +25,7 @@ pub trait FormatDate {
     fn long_date(self) -> String;
 }
 
-impl FormatDate for DateTime<Local> {
+impl FormatDate for DateTime {
     fn long_date(self) -> String {
         let formatted = self.format("%A, %B %-d, %Y at %r");
         let relative =

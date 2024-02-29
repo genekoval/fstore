@@ -765,25 +765,37 @@ name = "fstore"
 version = "0.1.0"
 dependencies = [
  "bytes",
- "bytesize",
  "chrono",
- "chrono-humanize",
- "clap",
  "futures-core",
  "log",
  "mime",
- "num-format",
  "reqwest",
  "serde",
- "serde_json",
- "serde_yaml",
- "tabled",
  "thiserror",
  "tokio",
  "tokio-stream",
  "tokio-util",
  "url",
  "uuid",
+]
+
+[[package]]
+name = "fstore-cli"
+version = "0.1.0"
+dependencies = [
+ "bytesize",
+ "chrono-humanize",
+ "clap",
+ "fstore",
+ "log",
+ "num-format",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "tabled",
+ "tokio",
+ "tokio-util",
+ "url",
 ]
 
 [[package]]
