@@ -51,8 +51,8 @@ enum Command {
 
     /// Add an object to a bucket
     Add {
-        /// Bucket name
-        bucket: String,
+        /// Bucket ID
+        bucket: Uuid,
 
         /// File to upload (STDIN if missing)
         file: Option<PathBuf>,

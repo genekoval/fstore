@@ -130,23 +130,22 @@ async fn about(State(AppState { store }): State<AppState>) -> Json<About> {
 
 async fn add_bucket(
     State(AppState { store }): State<AppState>,
-    Path(name): Path<String>,
+    Path(bucket): Path<String>,
 ) -> Result<Json<Bucket>> {
-    Ok(Json(store.add_bucket(&name).await?))
+    Ok(Json(store.add_bucket(&bucket).await?))
 }
 
 async fn add_object(
     State(AppState { store }): State<AppState>,
-    Path(name): Path<String>,
+    Path(bucket): Path<Uuid>,
     request: Request,
 ) -> Result<Json<Object>> {
-    let bucket = store.get_bucket(&name).await?;
     let mut part = store.get_part(None).await?;
 
     part.stream_to_file(request.into_body().into_data_stream())
         .await?;
 
-    let object = store.commit_part(&bucket.id, part.id()).await?;
+    let object = store.commit_part(&bucket, part.id()).await?;
 
     Ok(Json(object))
 }
@@ -186,9 +185,9 @@ async fn commit_part(
 
 async fn get_bucket(
     State(AppState { store }): State<AppState>,
-    Path(name): Path<String>,
+    Path(bucket): Path<String>,
 ) -> Result<Json<Bucket>> {
-    Ok(Json(store.get_bucket(&name).await?))
+    Ok(Json(store.get_bucket(&bucket).await?))
 }
 
 async fn get_buckets(
@@ -249,9 +248,9 @@ async fn prune(
 
 async fn remove_bucket(
     State(AppState { store }): State<AppState>,
-    Path(name): Path<Uuid>,
+    Path(bucket): Path<Uuid>,
 ) -> Result<StatusCode> {
-    store.remove_bucket(&name).await?;
+    store.remove_bucket(&bucket).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -288,7 +287,7 @@ pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/", get(about))
         .route(
-            "/bucket/:name",
+            "/bucket/:bucket",
             get(get_bucket)
                 .put(add_bucket)
                 .post(add_object)

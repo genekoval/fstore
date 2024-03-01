@@ -101,13 +101,13 @@ impl Client {
             .await?)
     }
 
-    pub async fn add_object<T>(&self, bucket: &str, object: T) -> Result<Object>
+    pub async fn add_object<T>(&self, bucket: Uuid, object: T) -> Result<Object>
     where
         T: AsyncRead + Send + Sync + 'static,
     {
         Ok(self
             .client
-            .post(self.path(&["bucket", &bucket]))
+            .post(self.path(&["bucket", &bucket.to_string()]))
             .body(Body::wrap_stream(ReaderStream::new(object)))
             .send_and_check()
             .await?
@@ -143,8 +143,8 @@ impl Client {
 
     pub async fn get_object(
         &self,
-        bucket: &Uuid,
-        object: &Uuid,
+        bucket: Uuid,
+        object: Uuid,
     ) -> Result<Object> {
         Ok(self
             .client
@@ -200,8 +200,8 @@ impl Client {
 
     pub async fn remove_object(
         &self,
-        bucket: &Uuid,
-        object: &Uuid,
+        bucket: Uuid,
+        object: Uuid,
     ) -> Result<Object> {
         Ok(self
             .client
@@ -218,7 +218,7 @@ impl Client {
 
     pub async fn remove_objects(
         &self,
-        bucket: &Uuid,
+        bucket: Uuid,
         objects: &[Uuid],
     ) -> Result<RemoveResult> {
         if objects.is_empty() {
@@ -266,8 +266,8 @@ impl Client {
 
     pub async fn stream_object(
         &self,
-        bucket: &Uuid,
-        object: &Uuid,
+        bucket: Uuid,
+        object: Uuid,
     ) -> Result<impl Stream<Item = std::io::Result<Bytes>>> {
         Ok(self
             .client
@@ -299,7 +299,36 @@ impl Bucket {
         &self.id
     }
 
+    pub async fn add_object<T>(&self, object: T) -> Result<Object>
+    where
+        T: AsyncRead + Send + Sync + 'static,
+    {
+        self.client.add_object(self.id, object).await
+    }
+
+    pub async fn get_object(&self, id: Uuid) -> Result<Object> {
+        self.client.get_object(self.id, id).await
+    }
+
+    pub async fn remove_object(&self, id: Uuid) -> Result<Object> {
+        self.client.remove_object(self.id, id).await
+    }
+
+    pub async fn remove_objects(
+        &self,
+        objects: &[Uuid],
+    ) -> Result<RemoveResult> {
+        self.client.remove_objects(self.id, objects).await
+    }
+
     pub async fn rename(&self, name: &str) -> Result<()> {
         self.client.rename_bucket(&self.id, name).await
+    }
+
+    pub async fn stream_object(
+        &self,
+        id: Uuid,
+    ) -> Result<impl Stream<Item = std::io::Result<Bytes>>> {
+        self.client.stream_object(self.id, id).await
     }
 }

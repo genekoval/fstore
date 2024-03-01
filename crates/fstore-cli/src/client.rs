@@ -85,7 +85,7 @@ impl Client {
         object: Uuid,
         destination: Option<PathBuf>,
     ) -> Result {
-        let stream = self.client.stream_object(&bucket, &object).await?;
+        let stream = self.client.stream_object(bucket, object).await?;
         let mut reader = StreamReader::new(stream);
 
         match destination {
@@ -150,7 +150,7 @@ impl Client {
         object: Uuid,
     ) -> Result {
         self.client
-            .get_object(&bucket, &object)
+            .get_object(bucket, object)
             .await?
             .print(self.output);
 
@@ -194,7 +194,7 @@ impl Client {
         bucket: Uuid,
         objects: Vec<Uuid>,
     ) -> Result {
-        let result = self.client.remove_objects(&bucket, &objects).await?;
+        let result = self.client.remove_objects(bucket, &objects).await?;
         let total = result.objects_removed;
 
         match total {
@@ -224,22 +224,22 @@ impl Client {
         Ok(())
     }
 
-    pub async fn stream_stdin(&self, bucket: String) -> Result {
+    pub async fn stream_stdin(&self, bucket: Uuid) -> Result {
         self.client
-            .add_object(&bucket, stdin())
+            .add_object(bucket, stdin())
             .await?
             .print(self.output);
 
         Ok(())
     }
 
-    pub async fn upload_file(&self, bucket: String, file: PathBuf) -> Result {
+    pub async fn upload_file(&self, bucket: Uuid, file: PathBuf) -> Result {
         let file = File::open(&file).await.map_err(|err| {
             format!("Failed to open file '{}': {err}", file.display())
         })?;
 
         self.client
-            .add_object(&bucket, file)
+            .add_object(bucket, file)
             .await?
             .print(self.output);
 
