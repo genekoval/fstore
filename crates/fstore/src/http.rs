@@ -4,12 +4,12 @@ use crate::{
 };
 
 use bytes::Bytes;
-use futures_core::Stream;
+use futures_core::{Stream, TryStream};
 use mime::{Mime, TEXT_PLAIN_UTF_8};
 use reqwest::{
     header::CONTENT_TYPE, Body, RequestBuilder, Response, StatusCode, Url,
 };
-use std::fmt::Write;
+use std::{error, fmt::Write};
 use tokio::io::AsyncRead;
 use tokio_stream::StreamExt;
 use tokio_util::io::ReaderStream;
@@ -105,10 +105,24 @@ impl Client {
     where
         T: AsyncRead + Send + Sync + 'static,
     {
+        let stream = ReaderStream::new(object);
+        self.add_object_stream(bucket, stream).await
+    }
+
+    pub async fn add_object_stream<S>(
+        &self,
+        bucket: Uuid,
+        stream: S,
+    ) -> Result<Object>
+    where
+        S: TryStream + Send + 'static,
+        S::Error: Into<Box<dyn error::Error + Send + Sync>>,
+        Bytes: From<S::Ok>,
+    {
         Ok(self
             .client
             .post(self.path(&["bucket", &bucket.to_string()]))
-            .body(Body::wrap_stream(ReaderStream::new(object)))
+            .body(Body::wrap_stream(stream))
             .send_and_check()
             .await?
             .json()
@@ -304,6 +318,15 @@ impl Bucket {
         T: AsyncRead + Send + Sync + 'static,
     {
         self.client.add_object(self.id, object).await
+    }
+
+    pub async fn add_object_stream<S>(&self, stream: S) -> Result<Object>
+    where
+        S: TryStream + Send + 'static,
+        S::Error: Into<Box<dyn error::Error + Send + Sync>>,
+        Bytes: From<S::Ok>,
+    {
+        self.client.add_object_stream(self.id, stream).await
     }
 
     pub async fn get_object(&self, id: Uuid) -> Result<Object> {
