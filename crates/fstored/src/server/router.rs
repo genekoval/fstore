@@ -5,7 +5,10 @@ use axum::{
     async_trait,
     body::Bytes,
     extract::{rejection::BytesRejection, FromRequest, Path, Request, State},
-    http::{header::CONTENT_TYPE, StatusCode},
+    http::{
+        header::{CONTENT_LENGTH, CONTENT_TYPE},
+        StatusCode,
+    },
     response::{IntoResponse, Response},
     routing::{delete, get, post, put},
     Json, Router,
@@ -203,7 +206,10 @@ async fn get_object_data(
     let object = store.get_object_metadata(&bucket, &object).await?;
     let file = store.get_object(&object.id).await?;
 
-    let headers = [(CONTENT_TYPE, object.media_type())];
+    let headers = [
+        (CONTENT_LENGTH, object.size.to_string()),
+        (CONTENT_TYPE, object.media_type()),
+    ];
     let body = AsyncReadBody::new(file);
 
     Ok((headers, body).into_response())

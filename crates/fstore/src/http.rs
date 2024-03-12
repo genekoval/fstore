@@ -1,6 +1,7 @@
 use crate::{
     error::{Error, ErrorKind, Result},
-    model, About, Object, ObjectError, RemoveResult, StoreTotals,
+    model, About, Object, ObjectError, ObjectSummary, RemoveResult,
+    StoreTotals,
 };
 
 use bytes::Bytes;
@@ -282,8 +283,9 @@ impl Client {
         &self,
         bucket: Uuid,
         object: Uuid,
-    ) -> Result<impl Stream<Item = std::io::Result<Bytes>>> {
-        Ok(self
+    ) -> Result<(ObjectSummary, impl Stream<Item = std::io::Result<Bytes>>)>
+    {
+        let res = self
             .client
             .get(self.path(&[
                 "object",
@@ -292,9 +294,36 @@ impl Client {
                 "data",
             ]))
             .send_and_check()
-            .await?
+            .await?;
+
+        let content_length: u64 = res
+            .headers()
+            .get("content-length")
+            .expect("server response should contain a content-length header")
+            .to_str()
+            .expect("content-length header value should be valid ASCII")
+            .parse()
+            .expect("content-length header value should be a valid number");
+
+        let content_type: String = res
+            .headers()
+            .get("content-type")
+            .expect("cerver response should contain a content-type header")
+            .to_str()
+            .expect("content-type header value should be valid ASCII")
+            .into();
+
+        let stream = res
             .bytes_stream()
-            .map(|result| result.map_err(std::io::Error::other)))
+            .map(|result| result.map_err(std::io::Error::other));
+
+        Ok((
+            ObjectSummary {
+                media_type: content_type,
+                size: content_length,
+            },
+            stream,
+        ))
     }
 }
 
@@ -351,7 +380,8 @@ impl Bucket {
     pub async fn stream_object(
         &self,
         id: Uuid,
-    ) -> Result<impl Stream<Item = std::io::Result<Bytes>>> {
+    ) -> Result<(ObjectSummary, impl Stream<Item = std::io::Result<Bytes>>)>
+    {
         self.client.stream_object(self.id, id).await
     }
 }
