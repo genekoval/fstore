@@ -110,6 +110,21 @@ impl Client {
         self.add_object_stream(bucket, stream).await
     }
 
+    pub async fn add_object_bytes(
+        &self,
+        bucket: Uuid,
+        object: Bytes,
+    ) -> Result<Object> {
+        Ok(self
+            .client
+            .post(self.path(&["bucket", &bucket.to_string()]))
+            .body(object)
+            .send_and_check()
+            .await?
+            .json()
+            .await?)
+    }
+
     pub async fn add_object_stream<S>(
         &self,
         bucket: Uuid,
@@ -172,6 +187,74 @@ impl Client {
             .await?
             .json()
             .await?)
+    }
+
+    async fn get_object_data(
+        &self,
+        bucket: Uuid,
+        object: Uuid,
+    ) -> Result<(ObjectSummary, Response)> {
+        let response = self
+            .client
+            .get(self.path(&[
+                "object",
+                &bucket.to_string(),
+                &object.to_string(),
+                "data",
+            ]))
+            .send_and_check()
+            .await?;
+
+        let content_length: u64 = response
+            .headers()
+            .get("content-length")
+            .expect("server response should contain a content-length header")
+            .to_str()
+            .expect("content-length header value should be valid ASCII")
+            .parse()
+            .expect("content-length header value should be a valid number");
+
+        let content_type: String = response
+            .headers()
+            .get("content-type")
+            .expect("cerver response should contain a content-type header")
+            .to_str()
+            .expect("content-type header value should be valid ASCII")
+            .into();
+
+        let summary = ObjectSummary {
+            media_type: content_type,
+            size: content_length,
+        };
+
+        Ok((summary, response))
+    }
+
+    pub async fn get_object_bytes(
+        &self,
+        bucket: Uuid,
+        object: Uuid,
+    ) -> Result<(ObjectSummary, Bytes)> {
+        let (summary, response) = self.get_object_data(bucket, object).await?;
+
+        let bytes = response.bytes().await?;
+
+        Ok((summary, bytes))
+    }
+
+    pub async fn get_object_stream(
+        &self,
+        bucket: Uuid,
+        object: Uuid,
+    ) -> Result<(ObjectSummary, impl Stream<Item = std::io::Result<Bytes>>)>
+    {
+        let (summary, response) = self.get_object_data(bucket, object).await?;
+
+        let stream = response
+            .bytes_stream()
+            .map(|result| result.map_err(std::io::Error::other));
+
+        Ok((summary, stream))
     }
 
     pub async fn get_object_errors(&self) -> Result<Vec<ObjectError>> {
@@ -278,53 +361,6 @@ impl Client {
             .json()
             .await?)
     }
-
-    pub async fn stream_object(
-        &self,
-        bucket: Uuid,
-        object: Uuid,
-    ) -> Result<(ObjectSummary, impl Stream<Item = std::io::Result<Bytes>>)>
-    {
-        let res = self
-            .client
-            .get(self.path(&[
-                "object",
-                &bucket.to_string(),
-                &object.to_string(),
-                "data",
-            ]))
-            .send_and_check()
-            .await?;
-
-        let content_length: u64 = res
-            .headers()
-            .get("content-length")
-            .expect("server response should contain a content-length header")
-            .to_str()
-            .expect("content-length header value should be valid ASCII")
-            .parse()
-            .expect("content-length header value should be a valid number");
-
-        let content_type: String = res
-            .headers()
-            .get("content-type")
-            .expect("cerver response should contain a content-type header")
-            .to_str()
-            .expect("content-type header value should be valid ASCII")
-            .into();
-
-        let stream = res
-            .bytes_stream()
-            .map(|result| result.map_err(std::io::Error::other));
-
-        Ok((
-            ObjectSummary {
-                media_type: content_type,
-                size: content_length,
-            },
-            stream,
-        ))
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -349,6 +385,10 @@ impl Bucket {
         self.client.add_object(self.id, object).await
     }
 
+    pub async fn add_object_bytes(&self, object: Bytes) -> Result<Object> {
+        self.client.add_object_bytes(self.id, object).await
+    }
+
     pub async fn add_object_stream<S>(&self, stream: S) -> Result<Object>
     where
         S: TryStream + Send + 'static,
@@ -360,6 +400,21 @@ impl Bucket {
 
     pub async fn get_object(&self, id: Uuid) -> Result<Object> {
         self.client.get_object(self.id, id).await
+    }
+
+    pub async fn get_object_bytes(
+        &self,
+        id: Uuid,
+    ) -> Result<(ObjectSummary, Bytes)> {
+        self.client.get_object_bytes(self.id, id).await
+    }
+
+    pub async fn get_object_stream(
+        &self,
+        id: Uuid,
+    ) -> Result<(ObjectSummary, impl Stream<Item = std::io::Result<Bytes>>)>
+    {
+        self.client.get_object_stream(self.id, id).await
     }
 
     pub async fn remove_object(&self, id: Uuid) -> Result<Object> {
@@ -375,13 +430,5 @@ impl Bucket {
 
     pub async fn rename(&self, name: &str) -> Result<()> {
         self.client.rename_bucket(&self.id, name).await
-    }
-
-    pub async fn stream_object(
-        &self,
-        id: Uuid,
-    ) -> Result<(ObjectSummary, impl Stream<Item = std::io::Result<Bytes>>)>
-    {
-        self.client.stream_object(self.id, id).await
     }
 }
