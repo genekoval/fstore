@@ -304,14 +304,29 @@ impl ObjectStore {
 
     pub async fn get_object_metadata(
         &self,
-        bucket_id: &Uuid,
-        object_id: &Uuid,
+        bucket_id: Uuid,
+        object_id: Uuid,
     ) -> Result<Object> {
-        self.database
-            .get_object(bucket_id, object_id)
+        self.get_objects(bucket_id, &[object_id])
             .await?
-            .map(|object| object.into())
-            .ok_or_not_found("Object")
+            .pop()
+            .ok_or_not_found("Bucket or object not found")
+    }
+
+    pub async fn get_objects(
+        &self,
+        bucket_id: Uuid,
+        objects: &[Uuid],
+    ) -> Result<Vec<Object>> {
+        let objects = self
+            .database
+            .get_objects(bucket_id, objects)
+            .await?
+            .into_iter()
+            .map(Into::into)
+            .collect();
+
+        Ok(objects)
     }
 
     pub async fn get_part(&self, part_id: Option<&Uuid>) -> Result<Part> {

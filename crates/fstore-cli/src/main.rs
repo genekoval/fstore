@@ -100,8 +100,8 @@ enum Command {
         #[arg(requires = "object")]
         bucket: Option<Uuid>,
 
-        /// Object UUID
-        object: Option<Uuid>,
+        /// Object UUIDs
+        object: Option<Vec<Uuid>>,
     },
 
     /// Select the server to use
@@ -287,7 +287,7 @@ async fn run_command(
         }
         Command::Stat { bucket, object } => match (bucket, object) {
             (Some(bucket), Some(object)) => {
-                client.get_object_metadata(bucket, object).await
+                client.get_objects(bucket, &object).await
             }
             _ => client.status().await,
         },

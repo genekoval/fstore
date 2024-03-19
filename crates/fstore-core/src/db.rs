@@ -25,7 +25,7 @@ database! {
 
     get_errors() -> Vec<ObjectError>;
 
-    get_object(bucket_id: &Uuid, object_id: &Uuid) -> Option<Object>;
+    get_objects(bucket_id: Uuid, objects: &[Uuid]) -> Vec<Object>;
 
     get_object_count(before: Timestamp) -> i64;
 

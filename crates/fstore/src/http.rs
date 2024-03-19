@@ -189,6 +189,32 @@ impl Client {
             .await?)
     }
 
+    pub async fn get_objects(
+        &self,
+        bucket: Uuid,
+        objects: &[Uuid],
+    ) -> Result<Vec<Object>> {
+        if objects.is_empty() {
+            return Ok(Default::default());
+        }
+
+        let body = objects
+            .iter()
+            .map(ToString::to_string)
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        Ok(self
+            .client
+            .get(self.path(&["object", &bucket.to_string()]))
+            .content_type(TEXT_PLAIN_UTF_8)
+            .body(body)
+            .send_and_check()
+            .await?
+            .json()
+            .await?)
+    }
+
     async fn get_object_data(
         &self,
         bucket: Uuid,

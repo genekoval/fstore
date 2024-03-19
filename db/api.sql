@@ -201,21 +201,23 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE FUNCTION get_object(
-    a_bucket_id     uuid,
-    a_object_id     uuid
-) RETURNS SETOF object AS $$
+CREATE FUNCTION get_objects(a_bucket_id uuid, a_objects uuid[])
+RETURNS SETOF object AS $$
 BEGIN
     RETURN QUERY
-    SELECT
-        object_id,
-        hash,
-        size,
-        "type",
-        subtype,
-        date_added
-    FROM bucket_contents
-    WHERE bucket_id = a_bucket_id AND object_id = a_object_id;
+    SELECT object.*
+    FROM (
+        SELECT
+            ordinality,
+            a_bucket_id AS bucket_id,
+            unnest AS object_id
+        FROM unnest(a_objects) WITH ORDINALITY
+    ) objects
+    JOIN data.bucket_object b ON
+        b.bucket_id = objects.bucket_id AND
+        b.object_id = objects.object_id
+    JOIN object ON object.object_id = objects.object_id
+    ORDER BY ordinality;
 END;
 $$ LANGUAGE plpgsql;
 

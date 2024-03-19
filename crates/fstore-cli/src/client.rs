@@ -144,13 +144,9 @@ impl Client {
         Ok(())
     }
 
-    pub async fn get_object_metadata(
-        &self,
-        bucket: Uuid,
-        object: Uuid,
-    ) -> Result {
+    pub async fn get_objects(&self, bucket: Uuid, objects: &[Uuid]) -> Result {
         self.client
-            .get_object(bucket, object)
+            .get_objects(bucket, objects)
             .await?
             .print(self.output);
 

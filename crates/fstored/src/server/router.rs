@@ -203,7 +203,7 @@ async fn get_object_data(
     State(AppState { store }): State<AppState>,
     Path((bucket, object)): Path<(Uuid, Uuid)>,
 ) -> Result<Response> {
-    let object = store.get_object_metadata(&bucket, &object).await?;
+    let object = store.get_object_metadata(bucket, object).await?;
     let file = store.get_object(&object.id).await?;
 
     let headers = [
@@ -225,9 +225,17 @@ async fn get_object_metadata(
     State(AppState { store }): State<AppState>,
     Path((bucket_id, object_id)): Path<(Uuid, Uuid)>,
 ) -> Result<Json<Object>> {
-    Ok(Json(
-        store.get_object_metadata(&bucket_id, &object_id).await?,
-    ))
+    let object = store.get_object_metadata(bucket_id, object_id).await?;
+    Ok(Json(object))
+}
+
+async fn get_objects(
+    State(AppState { store }): State<AppState>,
+    Path(bucket_id): Path<Uuid>,
+    IdList(objects): IdList,
+) -> Result<Json<Vec<Object>>> {
+    let objects = store.get_objects(bucket_id, &objects).await?;
+    Ok(Json(objects))
 }
 
 async fn new_part(
@@ -303,7 +311,7 @@ pub fn routes() -> Router<AppState> {
         .route("/bucket/:old/:new", put(rename_bucket))
         .route("/buckets", get(get_buckets))
         .route("/object", post(new_part))
-        .route("/object/:id", post(append_part))
+        .route("/object/:id", get(get_objects).post(append_part))
         .route(
             "/object/:bucket/:id",
             get(get_object_metadata)
