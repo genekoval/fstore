@@ -428,6 +428,10 @@ impl Bucket {
         self.client.get_object(self.id, id).await
     }
 
+    pub async fn get_objects(&self, objects: &[Uuid]) -> Result<Vec<Object>> {
+        self.client.get_objects(self.id, objects).await
+    }
+
     pub async fn get_object_bytes(
         &self,
         id: Uuid,
