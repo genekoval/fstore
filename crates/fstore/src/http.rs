@@ -131,7 +131,7 @@ impl Client {
         stream: S,
     ) -> Result<Object>
     where
-        S: TryStream + Send + 'static,
+        S: TryStream + Send + Sync + 'static,
         S::Error: Into<Box<dyn error::Error + Send + Sync>>,
         Bytes: From<S::Ok>,
     {
@@ -417,7 +417,7 @@ impl Bucket {
 
     pub async fn add_object_stream<S>(&self, stream: S) -> Result<Object>
     where
-        S: TryStream + Send + 'static,
+        S: TryStream + Send + Sync + 'static,
         S::Error: Into<Box<dyn error::Error + Send + Sync>>,
         Bytes: From<S::Ok>,
     {
