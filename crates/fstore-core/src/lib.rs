@@ -34,9 +34,10 @@ use std::{
     sync::Arc,
 };
 use tokio::{
-    sync::{watch, Semaphore},
-    task,
+    sync::Semaphore,
+    task::{self, JoinHandle},
 };
+use tokio_util::task::TaskTracker;
 use uuid::Uuid;
 
 const DATABASE_DUMP_FILENAME: &str = "fstore.dump";
@@ -182,7 +183,9 @@ impl ObjectStore {
         Ok(())
     }
 
-    pub async fn archive(self: Arc<Self>) -> Result<Progress> {
+    pub async fn archive(
+        self: Arc<Self>,
+    ) -> Result<(Progress, JoinHandle<Result<()>>)> {
         let archive = self.archive.as_deref().ok_or_else(|| {
             Error::Internal("archive location not specified".into())
         })?;
@@ -207,14 +210,17 @@ impl ObjectStore {
         let progress = guard.clone();
         let action = SyncAction::new(archive);
 
-        task::spawn(async move {
-            self.for_each_object(guard, action).await;
-        });
+        let handle =
+            task::spawn(
+                async move { self.for_each_object(guard, action).await },
+            );
 
-        Ok(progress)
+        Ok((progress, handle))
     }
 
-    pub async fn check(self: Arc<Self>) -> Result<Progress> {
+    pub async fn check(
+        self: Arc<Self>,
+    ) -> Result<(Progress, JoinHandle<Result<()>>)> {
         let started = Local::now();
         let total = self.get_object_count(started).await?;
         let guard =
@@ -222,11 +228,11 @@ impl ObjectStore {
 
         let progress = guard.clone();
 
-        task::spawn(async move {
-            self.for_each_object(guard, CheckAction).await;
+        let handle = task::spawn(async move {
+            self.for_each_object(guard, CheckAction).await
         });
 
-        Ok(progress)
+        Ok((progress, handle))
     }
 
     pub async fn init(&self) -> result::Result<(), String> {
@@ -426,27 +432,29 @@ impl ObjectStore {
         self: Arc<Self>,
         progress: ProgressGuard,
         action: impl ObjectStreamAction,
-    ) {
-        let (tx, rx) = watch::channel(());
+    ) -> Result<()> {
+        let tracker = TaskTracker::new();
         let semaphore = Arc::new(Semaphore::new(num_cpus::get()));
+        let mut error: Option<Error> = None;
         let mut stream = self.database.stream_objects(progress.started());
 
-        while let Some(object) = stream.next().await {
+        'stream: while let Some(object) = stream.next().await {
             let object = match object {
                 Ok(object) => object,
                 Err(err) => {
-                    error!("Failed to fetch object from database: {err}");
-                    return;
+                    error = Some(Error::Internal(format!(
+                        "failed to fetch object from database: {err}"
+                    )));
+                    break 'stream;
                 }
             };
 
             let permit = semaphore.clone().acquire_owned().await.unwrap();
             let store = self.clone();
             let progress = progress.clone();
-            let rx = rx.clone();
             let action = action.clone();
 
-            task::spawn(async move {
+            tracker.spawn(async move {
                 let messages = match action.run(&store, &object).await {
                     Ok(()) => progress.clear_error(object.object_id),
                     Err(message) => progress.error(object.object_id, message),
@@ -464,12 +472,11 @@ impl ObjectStore {
                 }
 
                 trace!("Processed object {}", object.object_id);
-                drop(rx);
             });
         }
 
-        drop(rx);
-        tx.closed().await;
+        tracker.close();
+        tracker.wait().await;
 
         let messages = progress.messages();
         if !messages.is_empty() {
@@ -478,6 +485,11 @@ impl ObjectStore {
             {
                 error!("failed to update object errors: {err}");
             }
+        }
+
+        match error {
+            Some(err) => Err(err),
+            None => Ok(()),
         }
     }
 }

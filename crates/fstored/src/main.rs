@@ -190,7 +190,7 @@ async fn run_async(
             }
 
             store(&config, |store| async move {
-                let progress = store.archive().await?;
+                let (progress, handle) = store.archive().await?;
 
                 let bar = if *quiet {
                     None
@@ -208,36 +208,36 @@ async fn run_async(
                     Some(ProgressBarTask::new(title, progress.clone()))
                 };
 
-                let success = progress.finished().await;
+                let result = handle.await;
 
                 if let Some(bar) = bar {
                     bar.cancel().await;
                 }
 
-                if success {
-                    let completed = progress.completed();
-                    let errors = progress.errors();
+                result??;
 
-                    println!(
-                        "Synced {} object{} with archive{}",
-                        completed,
-                        match completed {
-                            1 => "",
-                            _ => "s",
-                        },
-                        match errors {
-                            0 => "".into(),
-                            _ => format!(
-                                " ({} error{})",
-                                errors,
-                                match errors {
-                                    1 => "",
-                                    _ => "s",
-                                }
-                            ),
-                        }
-                    );
-                }
+                let completed = progress.completed();
+                let errors = progress.errors();
+
+                println!(
+                    "Synced {} object{} with archive{}",
+                    completed,
+                    match completed {
+                        1 => "",
+                        _ => "s",
+                    },
+                    match errors {
+                        0 => "".into(),
+                        _ => format!(
+                            " ({} error{})",
+                            errors,
+                            match errors {
+                                1 => "",
+                                _ => "s",
+                            }
+                        ),
+                    }
+                );
 
                 Ok(())
             })
@@ -245,7 +245,7 @@ async fn run_async(
         }
         Command::Check { quiet } => {
             store(&config, |store| async move {
-                let progress = store.check().await?;
+                let (progress, handle) = store.check().await?;
 
                 let bar = if *quiet {
                     None
@@ -263,37 +263,37 @@ async fn run_async(
                     Some(ProgressBarTask::new(title, progress.clone()))
                 };
 
-                let success = progress.finished().await;
+                let result = handle.await;
 
                 if let Some(bar) = bar {
                     bar.cancel().await;
                 }
 
-                if success {
-                    let completed = progress.completed();
-                    let errors = progress.errors();
+                result??;
 
-                    println!(
-                        "Checked {} object{} in {}s: {}",
-                        completed,
-                        match completed {
-                            1 => "",
-                            _ => "s",
-                        },
-                        progress.elapsed().num_seconds(),
-                        match errors {
-                            0 => "all valid".into(),
-                            _ => format!(
-                                "{} error{}",
-                                errors,
-                                match errors {
-                                    1 => "",
-                                    _ => "s",
-                                }
-                            ),
-                        }
-                    );
-                }
+                let completed = progress.completed();
+                let errors = progress.errors();
+
+                println!(
+                    "Checked {} object{} in {}s: {}",
+                    completed,
+                    match completed {
+                        1 => "",
+                        _ => "s",
+                    },
+                    progress.elapsed().num_seconds(),
+                    match errors {
+                        0 => "all valid".into(),
+                        _ => format!(
+                            "{} error{}",
+                            errors,
+                            match errors {
+                                1 => "",
+                                _ => "s",
+                            }
+                        ),
+                    }
+                );
 
                 Ok(())
             })

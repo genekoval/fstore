@@ -12,7 +12,6 @@ use std::{
         Arc, Mutex, RwLock,
     },
 };
-use tokio::sync::Notify;
 use uuid::Uuid;
 
 const MAX_ERRORS: usize = 100;
@@ -25,7 +24,6 @@ struct Inner {
     completed: AtomicU64,
     errors: AtomicU64,
     messages: Mutex<Vec<ObjectError>>,
-    notify: Notify,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -44,14 +42,8 @@ impl Progress {
         }
     }
 
-    pub async fn finished(&self) -> bool {
-        self.inner.notify.notified().await;
-        self.completed() == self.total()
-    }
-
     fn finish(&self) {
         *self.inner.ended.write().unwrap() = Some(Local::now());
-        self.inner.notify.notify_waiters();
     }
 
     pub fn completed(&self) -> u64 {

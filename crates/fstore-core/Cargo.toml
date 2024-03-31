@@ -24,7 +24,7 @@ sqlx = { workspace = true, features = [
 ] }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = ["fs", "sync"] }
-tokio-util = { workspace = true, features = ["io"] }
+tokio-util = { workspace = true, features = ["io", "rt"] }
 time = { workspace = true }
 uuid = { workspace = true, features = ["v4"] }
 walkdir = { workspace = true }
