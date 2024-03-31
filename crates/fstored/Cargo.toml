@@ -5,10 +5,13 @@ edition = "2021"
 build = "build.rs"
 
 [dependencies]
-axum = "0.7"
-axum-extra = { version = "0.9", features = ["async-read-body", "typed-header"] }
+axum = { workspace = true }
+axum-extra = { workspace = true, features = [
+    "async-read-body",
+    "typed-header",
+] }
 clap = { workspace = true, features = ["derive", "env"] }
-crossterm = "0.27"
+crossterm = { workspace = true }
 fstore = { path = "../fstore" }
 fstore-core = { path = "../fstore-core" }
 log = { workspace = true, features = ["serde"] }
@@ -25,7 +28,7 @@ tokio = { workspace = true, features = [
     "time",
 ] }
 tokio-util = { workspace = true }
-url = "2"
+url = { workspace = true }
 uuid = { workspace = true }
 
 [dependencies.axum-unix]

@@ -4,16 +4,16 @@ version = "0.3.6"
 edition = "2021"
 
 [dependencies]
-base16ct = "0.2"
-bytes = "1"
+base16ct = { workspace = true }
+bytes = { workspace = true }
 chrono = { workspace = true }
 fstore = { path = "../fstore" }
-futures = "0.3"
-libc = "0.2"
+futures = { workspace = true }
+libc = { workspace = true }
 log = { workspace = true }
-magic = "0.16"
-num_cpus = "1"
-sha2 = "0.10"
+magic = { workspace = true }
+num_cpus = { workspace = true }
+sha2 = { workspace = true }
 serde = { workspace = true }
 sqlx = { workspace = true, features = [
     "chrono",
@@ -27,7 +27,7 @@ tokio = { workspace = true, features = ["fs", "sync"] }
 tokio-util = { workspace = true, features = ["io"] }
 time = { workspace = true }
 uuid = { workspace = true, features = ["v4"] }
-walkdir = "2"
+walkdir = { workspace = true }
 
 [dependencies.pgtools]
 git = "https://git.aurora.aur/genya/pgtools.git"

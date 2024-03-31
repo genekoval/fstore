@@ -4,16 +4,16 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bytesize = { version = "1" }
-chrono-humanize = { version = "0.2" }
+bytesize = { workspace = true }
+chrono-humanize = { workspace = true }
 clap = { workspace = true, features = ["derive", "env"] }
 fstore = { path = "../fstore", features = ["http"] }
 log = { workspace = true }
-num-format = { version = "0.4", features = ["with-system-locale"] }
+num-format = { workspace = true, features = ["with-system-locale"] }
 serde = { workspace = true, features = ["derive"] }
-serde_json = { version = "1" }
+serde_json = { workspace = true }
 serde_yaml = { workspace = true }
-tabled = { version = "0.15" }
+tabled = { workspace = true }
 tokio = { workspace = true, features = ["io-std", "rt"] }
 tokio-util = { workspace = true }
 url = { workspace = true }
