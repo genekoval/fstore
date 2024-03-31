@@ -27,7 +27,7 @@ pub struct Config {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Http {
-    pub listen: Endpoint,
+    pub listen: Vec<Endpoint>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
