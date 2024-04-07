@@ -142,6 +142,15 @@ enum Bucket {
         name: String,
     },
 
+    /// Create a new bucket containing another bucket's objects
+    Clone {
+        /// ID of the bucket to clone
+        original: Uuid,
+
+        /// The new bucket's name
+        name: String,
+    },
+
     /// Retrieve information about a bucket
     Get(BucketGetArg),
 
@@ -268,6 +277,9 @@ async fn run_command(
         },
         Command::Bucket(args) => match args.command() {
             Bucket::Add { name } => client.add_bucket(name).await,
+            Bucket::Clone { original, name } => {
+                client.clone_bucket(original, name).await
+            }
             Bucket::Get(BucketGetArg { name }) => client.get_bucket(name).await,
             Bucket::Rm { id } => client.remove_bucket(id).await,
             Bucket::Rename { id, name } => {

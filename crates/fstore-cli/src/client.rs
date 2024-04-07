@@ -67,6 +67,14 @@ impl Client {
         Ok(())
     }
 
+    pub async fn clone_bucket(&self, original: Uuid, name: String) -> Result {
+        let bucket = self.client.clone_bucket(original, &name).await?;
+
+        println!("{}", bucket.id);
+
+        Ok(())
+    }
+
     pub async fn get_bucket(&self, name: String) -> Result {
         self.client.get_bucket(&name).await?.1.print(self.output);
 

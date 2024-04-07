@@ -15,6 +15,8 @@ database! {
         subtype: &str,
     ) -> Object;
 
+    clone_bucket(original: Uuid, name: &str) -> Bucket;
+
     create_bucket(name: &str) -> Bucket;
 
     fetch_bucket(name: &str) -> Bucket;

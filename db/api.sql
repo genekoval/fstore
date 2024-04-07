@@ -127,6 +127,27 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+CREATE FUNCTION clone_bucket(
+    a_original uuid,
+    a_name text
+) RETURNS SETOF bucket AS $$
+BEGIN
+    WITH new_bucket AS (
+        INSERT INTO data.bucket (name) VALUES (a_name)
+        RETURNING bucket_id
+    )
+    INSERT INTO data.bucket_object
+    SELECT (SELECT bucket_id FROM new_bucket), object_id, date_added
+    FROM data.bucket_object
+    WHERE bucket_id = a_original;
+
+    RETURN QUERY
+    SELECT *
+    FROM bucket
+    WHERE name = a_name;
+END;
+$$ LANGUAGE plpgsql;
+
 CREATE FUNCTION create_bucket(
     a_name          text
 ) RETURNS SETOF bucket AS $$

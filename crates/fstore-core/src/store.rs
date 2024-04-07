@@ -247,6 +247,14 @@ impl ObjectStore {
         Ok(self.database.create_bucket(name).await?.into())
     }
 
+    pub async fn clone_bucket(
+        &self,
+        original: Uuid,
+        name: &str,
+    ) -> Result<Bucket> {
+        Ok(self.database.clone_bucket(original, name).await?.into())
+    }
+
     pub async fn commit_part(
         &self,
         bucket_id: &Uuid,

@@ -149,6 +149,20 @@ impl Client {
         Bucket::new(self, id)
     }
 
+    pub async fn clone_bucket(
+        &self,
+        original: Uuid,
+        name: &str,
+    ) -> Result<model::Bucket> {
+        Ok(self
+            .client
+            .post(self.path(&["bucket", &original.to_string(), name]))
+            .send_and_check()
+            .await?
+            .json()
+            .await?)
+    }
+
     pub async fn get_bucket(
         &self,
         name: &str,
@@ -422,6 +436,15 @@ impl Bucket {
         Bytes: From<S::Ok>,
     {
         self.client.add_object_stream(self.id, stream).await
+    }
+
+    pub async fn clone_as(&self, name: &str) -> Result<Self> {
+        let clone = self.client.clone_bucket(self.id, name).await?;
+
+        Ok(Self {
+            client: self.client.clone(),
+            id: clone.id,
+        })
     }
 
     pub async fn get_object(&self, id: Uuid) -> Result<Object> {

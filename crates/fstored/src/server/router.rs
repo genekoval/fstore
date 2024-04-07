@@ -167,6 +167,13 @@ async fn append_part(
     Ok(bytes.to_string())
 }
 
+async fn clone_bucket(
+    State(AppState { store }): State<AppState>,
+    Path((id, name)): Path<(Uuid, String)>,
+) -> Result<Json<Bucket>> {
+    Ok(Json(store.clone_bucket(id, &name).await?))
+}
+
 async fn commit_part(
     State(AppState { store }): State<AppState>,
     Path((bucket, id)): Path<(String, Uuid)>,
@@ -285,9 +292,9 @@ async fn remove_objects(
 
 async fn rename_bucket(
     State(AppState { store }): State<AppState>,
-    Path((old, new)): Path<(Uuid, String)>,
+    Path((id, name)): Path<(Uuid, String)>,
 ) -> Result<StatusCode> {
-    store.rename_bucket(&old, &new).await?;
+    store.rename_bucket(&id, &name).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -308,7 +315,7 @@ pub fn routes() -> Router<AppState> {
                 .delete(remove_bucket),
         )
         .route("/bucket/:name/objects", delete(remove_objects))
-        .route("/bucket/:old/:new", put(rename_bucket))
+        .route("/bucket/:id/:name", put(rename_bucket).post(clone_bucket))
         .route("/buckets", get(get_buckets))
         .route("/object", post(new_part))
         .route("/object/:id", get(get_objects).post(append_part))
