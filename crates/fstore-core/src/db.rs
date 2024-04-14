@@ -25,6 +25,8 @@ database! {
 
     fetch_store_totals() -> StoreTotals;
 
+    get_bucket_objects(bucket_id: Uuid) -> Vec<Object>;
+
     get_errors() -> Vec<ObjectError>;
 
     get_objects(bucket_id: Uuid, objects: &[Uuid]) -> Vec<Object>;

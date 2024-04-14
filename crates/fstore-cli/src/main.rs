@@ -97,7 +97,6 @@ enum Command {
     /// Display object or object repo status
     Stat {
         /// Bucket UUID
-        #[arg(requires = "object")]
         bucket: Option<Uuid>,
 
         /// Object UUIDs
@@ -301,6 +300,7 @@ async fn run_command(
             (Some(bucket), Some(object)) => {
                 client.get_objects(bucket, &object).await
             }
+            (Some(bucket), None) => client.get_all_objects(bucket).await,
             _ => client.status().await,
         },
         Command::Use { server } => Ok(config.set_server(&server)?),

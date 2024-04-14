@@ -75,6 +75,15 @@ impl Client {
         Ok(())
     }
 
+    pub async fn get_all_objects(&self, bucket: Uuid) -> Result {
+        self.client
+            .get_all_objects(bucket)
+            .await?
+            .print(self.output);
+
+        Ok(())
+    }
+
     pub async fn get_bucket(&self, name: String) -> Result {
         self.client.get_bucket(&name).await?.1.print(self.output);
 

@@ -193,6 +193,13 @@ async fn commit_part(
     Ok(Json(object))
 }
 
+async fn get_all_objects(
+    State(AppState { store }): State<AppState>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<Vec<Object>>> {
+    Ok(Json(store.get_all_objects(id).await?))
+}
+
 async fn get_bucket(
     State(AppState { store }): State<AppState>,
     Path(bucket): Path<String>,
@@ -326,6 +333,7 @@ pub fn routes() -> Router<AppState> {
                 .delete(remove_object),
         )
         .route("/object/:bucket/:object/data", get(get_object_data))
+        .route("/object/:bucket/all", get(get_all_objects))
         .route("/object/errors", get(get_object_errors))
         .route("/objects", delete(prune))
         .route("/status", get(status))

@@ -163,6 +163,19 @@ impl Client {
             .await?)
     }
 
+    pub async fn get_all_objects(
+        &self,
+        bucket_id: Uuid,
+    ) -> Result<Vec<Object>> {
+        Ok(self
+            .client
+            .get(self.path(&["object", &bucket_id.to_string(), "all"]))
+            .send_and_check()
+            .await?
+            .json()
+            .await?)
+    }
+
     pub async fn get_bucket(
         &self,
         name: &str,
@@ -445,6 +458,10 @@ impl Bucket {
             client: self.client.clone(),
             id: clone.id,
         })
+    }
+
+    pub async fn get_all_objects(&self) -> Result<Vec<Object>> {
+        self.client.get_all_objects(self.id).await
     }
 
     pub async fn get_object(&self, id: Uuid) -> Result<Object> {

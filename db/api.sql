@@ -213,6 +213,18 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+CREATE FUNCTION get_bucket_objects(a_bucket_id uuid)
+RETURNS SETOF object AS $$
+BEGIN
+    RETURN QUERY
+    SELECT object.*
+    FROM data.bucket_object
+    JOIN object USING (object_id)
+    WHERE bucket_id = a_bucket_id
+    ORDER BY date_added;
+END;
+$$ LANGUAGE plpgsql;
+
 CREATE FUNCTION get_errors()
 RETURNS SETOF object_error AS $$
 BEGIN

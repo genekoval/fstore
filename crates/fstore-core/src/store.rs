@@ -276,6 +276,19 @@ impl ObjectStore {
             .into())
     }
 
+    pub async fn get_all_objects(
+        &self,
+        bucket_id: Uuid,
+    ) -> Result<Vec<Object>> {
+        Ok(self
+            .database
+            .get_bucket_objects(bucket_id)
+            .await?
+            .into_iter()
+            .map(Into::into)
+            .collect())
+    }
+
     pub async fn get_bucket(&self, name: &str) -> Result<Bucket> {
         Ok(self.database.fetch_bucket(name).await?.into())
     }
