@@ -761,7 +761,7 @@ dependencies = [
 
 [[package]]
 name = "fstore"
-version = "0.1.0"
+version = "0.4.0"
 dependencies = [
  "bytes",
  "chrono",
@@ -799,7 +799,7 @@ dependencies = [
 
 [[package]]
 name = "fstore-core"
-version = "0.3.6"
+version = "0.4.0"
 dependencies = [
  "base16ct",
  "bytes",
@@ -825,7 +825,7 @@ dependencies = [
 
 [[package]]
 name = "fstored"
-version = "0.3.6"
+version = "0.4.0"
 dependencies = [
  "axum",
  "axum-extra",

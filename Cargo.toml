@@ -2,6 +2,10 @@
 resolver = "2"
 members = ["crates/*"]
 
+[workspace.package]
+version = "0.4.0"
+edition = "2021"
+
 [workspace.dependencies]
 axum = "0.7"
 axum-extra = "0.9"
