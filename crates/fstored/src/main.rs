@@ -17,7 +17,7 @@ shadow!(build);
 
 const DEFAULT_CONFIG: &str = match option_env!("FSTORED_DEFAULT_CONFIG") {
     Some(config) => config,
-    None => "/etc/fstore/fstore.yml",
+    None => "fstore.yml",
 };
 
 #[derive(Parser)]
