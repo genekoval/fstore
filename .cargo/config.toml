@@ -1,2 +1,5 @@
-[registries.aurora]
+[registries.genya]
 index = "sparse+https://git.aurora.aur/api/packages/genya/cargo/"
+
+[registries.fstore]
+index = "sparse+https://git.aurora.aur/api/packages/fstore/cargo/"

@@ -33,4 +33,4 @@ walkdir = { workspace = true }
 [dependencies.fstore]
 path = "../fstore"
 version = "0.4"
-registry = "aurora"
+registry = "fstore"

@@ -35,12 +35,12 @@ uuid = { workspace = true }
 [dependencies.fstore]
 path = "../fstore"
 version = "0.4"
-registry = "aurora"
+registry = "fstore"
 
 [dependencies.fstore-core]
 path = "../fstore-core"
 version = "0.4"
-registry = "aurora"
+registry = "fstore"
 
 [build-dependencies]
 shadow-rs = { workspace = true }
