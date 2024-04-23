@@ -7,7 +7,6 @@ edition.workspace = true
 base16ct = { workspace = true }
 bytes = { workspace = true }
 chrono = { workspace = true }
-fstore = { path = "../fstore" }
 futures = { workspace = true }
 libc = { workspace = true }
 log = { workspace = true }
@@ -30,3 +29,8 @@ tokio-util = { workspace = true, features = ["io", "rt"] }
 time = { workspace = true }
 uuid = { workspace = true, features = ["v4"] }
 walkdir = { workspace = true }
+
+[dependencies.fstore]
+path = "../fstore"
+version = "0.4"
+registry = "aurora"

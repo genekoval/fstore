@@ -14,8 +14,6 @@ axum-unix = { workspace = true, features = ["serde"] }
 clap = { workspace = true, features = ["derive", "env"] }
 crossterm = { workspace = true }
 dmon = { workspace = true }
-fstore = { path = "../fstore" }
-fstore-core = { path = "../fstore-core" }
 log = { workspace = true, features = ["serde"] }
 mime = "0.3"
 ratatui = "0.26"
@@ -33,6 +31,16 @@ tokio = { workspace = true, features = [
 tokio-util = { workspace = true }
 url = { workspace = true }
 uuid = { workspace = true }
+
+[dependencies.fstore]
+path = "../fstore"
+version = "0.4"
+registry = "aurora"
+
+[dependencies.fstore-core]
+path = "../fstore-core"
+version = "0.4"
+registry = "aurora"
 
 [build-dependencies]
 shadow-rs = { workspace = true }

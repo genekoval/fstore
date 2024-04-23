@@ -7,7 +7,6 @@ edition.workspace = true
 bytesize = { workspace = true }
 chrono-humanize = { workspace = true }
 clap = { workspace = true, features = ["derive", "env"] }
-fstore = { path = "../fstore", features = ["http"] }
 log = { workspace = true }
 num-format = { workspace = true, features = ["with-system-locale"] }
 serde = { workspace = true, features = ["derive"] }
@@ -17,6 +16,12 @@ tabled = { workspace = true }
 tokio = { workspace = true, features = ["io-std", "rt"] }
 tokio-util = { workspace = true }
 url = { workspace = true }
+
+[dependencies.fstore]
+path = "../fstore"
+version = "0.4"
+registry = "aurora"
+features = ["http"]
 
 [[bin]]
 name = "fstore"
