@@ -223,7 +223,8 @@ dependencies = [
 [[package]]
 name = "axum-unix"
 version = "0.1.0"
-source = "git+https://git.aurora.aur/genya/axum-unix.git#b60b707df9a5a9731f1ed04232f37f1100afe0d1"
+source = "sparse+https://git.aurora.aur/api/packages/genya/cargo/"
+checksum = "5bfb8b5dc02a73709c2bc4b6ba25a763e5ef3aba64fc2523931e1e70a42ff7cd"
 dependencies = [
  "axum",
  "futures-util",
@@ -651,7 +652,8 @@ dependencies = [
 [[package]]
 name = "dmon"
 version = "0.1.0"
-source = "git+https://git.aurora.aur/genya/dmon-rs.git#c4bd5f8ef1894a78c953e1f8993262937129e9bf"
+source = "sparse+https://git.aurora.aur/api/packages/genya/cargo/"
+checksum = "2158d7f0b0610b63a2a2ad0cbb86696cb03f9c0d3cbaa7ff6d153151bd1934ae"
 dependencies = [
  "nix",
 ]
@@ -1299,9 +1301,9 @@ checksum = "49f1f14873335454500d59611f1cf4a4b0f786f9ac11f4312a78e4cf2566695b"
 
 [[package]]
 name = "jobserver"
-version = "0.1.30"
+version = "0.1.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "685a7d121ee3f65ae4fddd72b25a04bb36b6af81bc0828f7d5434c0fe60fa3a2"
+checksum = "d2b099aaa34a9751c5bf0878add70444e1ed2dd73f347be99003d4577277de6e"
 dependencies = [
  "libc",
 ]
@@ -1765,7 +1767,8 @@ checksum = "e3148f5046208a5d56bcfc03053e3ca6334e51da8dfb19b6cdc8b306fae3283e"
 [[package]]
 name = "pgtools"
 version = "0.1.0"
-source = "git+https://git.aurora.aur/genya/pgtools.git#13cae72d0b5b5c0537a87b7b0f903dedd08b9a5f"
+source = "sparse+https://git.aurora.aur/api/packages/genya/cargo/"
+checksum = "1c1c66053927a3f869154f4f50e41ca3f653cf7e046777e9f4d39529ec777956"
 dependencies = [
  "log",
  "semver",
@@ -2053,9 +2056,9 @@ checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
 
 [[package]]
 name = "rustix"
-version = "0.38.32"
+version = "0.38.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "65e04861e65f21776e67888bfbea442b3642beaa0138fdb1dd7a84a52dffdb89"
+checksum = "70dc5ec042f7a43c4a73241207cecc9873a06d45debb38b329f8541d85c2730f"
 dependencies = [
  "bitflags 2.5.0",
  "errno",
@@ -2275,9 +2278,9 @@ dependencies = [
 
 [[package]]
 name = "signal-hook-registry"
-version = "1.4.1"
+version = "1.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d8229b473baa5980ac72ef434c4415e70c4b5e71b423043adb4ba059f89c99a1"
+checksum = "a9e9e0b4211b72e7b8b6e85c807d36c212bdb33ea8587f7569562a84df5465b1"
 dependencies = [
  "libc",
 ]
@@ -2410,7 +2413,8 @@ dependencies = [
 [[package]]
 name = "sqlx-helper-macros"
 version = "0.1.0"
-source = "git+https://git.aurora.aur/genya/sqlx-helper-macros.git#9db5f6d4faa0738ef3fb0205fd734900d689e0d1"
+source = "sparse+https://git.aurora.aur/api/packages/genya/cargo/"
+checksum = "4b677cb6eda54a6636a8721f890a99279caecf2a0c4dd30de3736f1034209ee5"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2740,7 +2744,8 @@ dependencies = [
 [[package]]
 name = "timber"
 version = "0.1.0"
-source = "git+https://git.aurora.aur/genya/timber-rs.git#101379237eb304b486b5d5ada0fbfbe304e0702a"
+source = "sparse+https://git.aurora.aur/api/packages/genya/cargo/"
+checksum = "7900fa00d86203b6a167731a95293582e979cc8414b8b6b707a72e008fe7c967"
 dependencies = [
  "bitflags 2.5.0",
  "chrono",

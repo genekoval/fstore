@@ -10,8 +10,10 @@ axum-extra = { workspace = true, features = [
     "async-read-body",
     "typed-header",
 ] }
+axum-unix = { workspace = true, features = ["serde"] }
 clap = { workspace = true, features = ["derive", "env"] }
 crossterm = { workspace = true }
+dmon = { workspace = true }
 fstore = { path = "../fstore" }
 fstore-core = { path = "../fstore-core" }
 log = { workspace = true, features = ["serde"] }
@@ -21,6 +23,7 @@ serde = { workspace = true }
 serde_yaml = { workspace = true }
 shadow-rs = { workspace = true }
 sqlx = { workspace = true, features = ["postgres"] }
+timber = { workspace = true, features = ["serde"] }
 tokio = { workspace = true, features = [
     "macros",
     "rt-multi-thread",
@@ -30,17 +33,6 @@ tokio = { workspace = true, features = [
 tokio-util = { workspace = true }
 url = { workspace = true }
 uuid = { workspace = true }
-
-[dependencies.axum-unix]
-git = "https://git.aurora.aur/genya/axum-unix.git"
-features = ["serde"]
-
-[dependencies.dmon]
-git = "https://git.aurora.aur/genya/dmon-rs.git"
-
-[dependencies.timber]
-git = "https://git.aurora.aur/genya/timber-rs.git"
-features = ["serde"]
 
 [build-dependencies]
 shadow-rs = { workspace = true }

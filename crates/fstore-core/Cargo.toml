@@ -13,6 +13,7 @@ libc = { workspace = true }
 log = { workspace = true }
 magic = { workspace = true }
 num_cpus = { workspace = true }
+pgtools = { workspace = true }
 sha2 = { workspace = true }
 serde = { workspace = true }
 sqlx = { workspace = true, features = [
@@ -22,15 +23,10 @@ sqlx = { workspace = true, features = [
     "runtime-tokio",
     "uuid",
 ] }
+sqlx-helper-macros = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = ["fs", "sync"] }
 tokio-util = { workspace = true, features = ["io", "rt"] }
 time = { workspace = true }
 uuid = { workspace = true, features = ["v4"] }
 walkdir = { workspace = true }
-
-[dependencies.pgtools]
-git = "https://git.aurora.aur/genya/pgtools.git"
-
-[dependencies.sqlx-helper-macros]
-git = "https://git.aurora.aur/genya/sqlx-helper-macros.git"
