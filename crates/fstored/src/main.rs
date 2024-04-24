@@ -15,7 +15,7 @@ use std::{future::Future, path::PathBuf, process::ExitCode, sync::Arc};
 
 shadow!(build);
 
-const DEFAULT_CONFIG: &str = match option_env!("FSTORED_DEFAULT_CONFIG") {
+const DEFAULT_CONFIG: &str = match option_env!("FSTORE_DEFAULT_CONFIG") {
     Some(config) => config,
     None => "fstore.yml",
 };

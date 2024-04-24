@@ -29,6 +29,11 @@ use tokio_util::task::TaskTracker;
 use uuid::Uuid;
 
 const DATABASE_DUMP_FILENAME: &str = "fstore.dump";
+const DEFAULT_SQL_DIRECTORY: &str =
+    match option_env!("FSTORE_DEFAULT_SQL_DIRECTORY") {
+        Some(dir) => dir,
+        None => "db",
+    };
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct DatabaseConfig {
@@ -45,7 +50,14 @@ pub struct DatabaseConfig {
     #[serde(default)]
     pub pg_restore: PgRestore,
 
+    #[serde(default = "DatabaseConfig::default_sql_directory")]
     pub sql_directory: PathBuf,
+}
+
+impl DatabaseConfig {
+    fn default_sql_directory() -> PathBuf {
+        DEFAULT_SQL_DIRECTORY.into()
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
