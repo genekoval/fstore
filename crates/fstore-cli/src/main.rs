@@ -8,11 +8,7 @@ use print::Output;
 
 use clap::{Args, Parser, Subcommand};
 use fstore::Uuid;
-use std::{
-    env,
-    path::{Path, PathBuf},
-    process::ExitCode,
-};
+use std::{path::PathBuf, process::ExitCode, result};
 
 #[derive(Debug, Parser)]
 #[command(version, arg_required_else_help = true)]
@@ -25,7 +21,7 @@ pub struct Cli {
         env = "FSTORE_CONFIG",
         global = true
     )]
-    /// Config file in YAML format
+    /// Config file in TOML format
     config: Option<PathBuf>,
 
     #[arg(short = 'H', long, env = "FSTORE_HUMAN_READABLE", global = true)]
@@ -36,12 +32,26 @@ pub struct Cli {
     /// Print data in JSON format
     json: bool,
 
-    #[arg(long, value_name = "NAME", env = "FSTORE_SERVER", global = true)]
-    /// Name of the server to use from config file
-    server: Option<String>,
+    #[arg(
+        long,
+        value_name = "NAME",
+        env = "FSTORE_SERVER",
+        global = true,
+        default_value = "default"
+    )]
+    /// Name of the server to use
+    ///
+    /// Server aliases are defined in the config file
+    server: String,
 
     #[command(subcommand)]
     command: Command,
+}
+
+impl Cli {
+    fn config(&self) -> result::Result<Config, String> {
+        Config::read(self.config.clone())
+    }
 }
 
 #[derive(Debug, Subcommand)]
@@ -101,11 +111,6 @@ enum Command {
 
         /// Object UUIDs
         object: Option<Vec<Uuid>>,
-    },
-
-    /// Select the server to use
-    Use {
-        server: String,
     },
 }
 
@@ -169,69 +174,25 @@ enum Bucket {
     },
 }
 
-fn find_config() -> Option<PathBuf> {
-    if let Some(config) = env::var_os("XDG_CONFIG_HOME") {
-        let config = Path::new(&config);
-
-        let path = config.join("fstore/fstore.yml");
-        if path.is_file() {
-            return Some(path);
-        }
-
-        let path = config.join("fstore.yml");
-        if path.is_file() {
-            return Some(path);
-        }
-    }
-
-    if let Some(home) = env::var_os("HOME") {
-        let home = Path::new(&home);
-        let config = home.join(".config");
-
-        let path = config.join("fstore/fstore.yml");
-        if path.is_file() {
-            return Some(path);
-        }
-
-        let path = config.join("fstore.yml");
-        if path.is_file() {
-            return Some(path);
-        }
-
-        let path = home.join(".fstore.yml");
-        if path.is_file() {
-            return Some(path);
-        }
-    }
-
-    None
-}
-
 fn main() -> ExitCode {
-    let mut args = Cli::parse();
-
-    let config = match args.config.take().or_else(find_config) {
-        Some(path) => match conf::read(&path) {
-            Ok(config) => config,
-            Err(err) => {
-                eprintln!("{err}");
-                return ExitCode::FAILURE;
-            }
-        },
-        None => {
-            eprintln!("Could not find a config file");
+    let args = Cli::parse();
+    let config = match args.config() {
+        Ok(config) => config,
+        Err(err) => {
+            eprintln!("{err}");
             return ExitCode::FAILURE;
         }
     };
 
-    let server = match config.server(args.server.as_deref()) {
-        Ok(Some(server)) => server,
-        Ok(None) => {
-            eprintln!("Server not selected");
-            return ExitCode::FAILURE;
-        }
-        Err(err) => {
-            eprintln!("{err}");
+    if config.servers.is_empty() {
+        eprintln!("no servers defined");
+        return ExitCode::FAILURE;
+    }
+
+    let server = match config.servers.get(&args.server) {
+        Some(server) => server,
+        None => {
+            eprintln!("server alias '{}' not defined", args.server);
             return ExitCode::FAILURE;
         }
     };
@@ -244,7 +205,7 @@ fn main() -> ExitCode {
         },
     );
 
-    match run(args.command, config, client) {
+    match run(args.command, client) {
         Ok(()) => ExitCode::SUCCESS,
         Err(err) => {
             eprintln!("{err}");
@@ -253,8 +214,8 @@ fn main() -> ExitCode {
     }
 }
 
-fn run(command: Command, config: Config, client: Client) -> Result {
-    let body = async move { run_command(command, config, client).await };
+fn run(command: Command, client: Client) -> Result {
+    let body = async move { run_command(command, client).await };
 
     tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -263,11 +224,7 @@ fn run(command: Command, config: Config, client: Client) -> Result {
         .block_on(body)
 }
 
-async fn run_command(
-    command: Command,
-    config: Config,
-    client: Client,
-) -> Result {
+async fn run_command(command: Command, client: Client) -> Result {
     match command {
         Command::About => client.about().await,
         Command::Add { bucket, file } => match file {
@@ -303,6 +260,5 @@ async fn run_command(
             (Some(bucket), None) => client.get_all_objects(bucket).await,
             _ => client.status().await,
         },
-        Command::Use { server } => Ok(config.set_server(&server)?),
     }
 }

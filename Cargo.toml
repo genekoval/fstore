@@ -9,7 +9,6 @@ edition = "2021"
 [workspace.dependencies]
 axum = "0.7"
 axum-extra = "0.9"
-axum-unix = { version = "0.1", registry = "genya" }
 base16ct = "0.2"
 bytes = "1"
 bytesize = "1"
@@ -30,7 +29,6 @@ pgtools = { version = "0.1", registry = "genya" }
 reqwest = "0.12"
 serde = "1"
 serde_json = "1"
-serde_yaml = "0.9"
 sha2 = "0.10"
 shadow-rs = "0.27"
 sqlx = "0.7"
@@ -42,6 +40,11 @@ thiserror = "1"
 tokio = "1"
 tokio-stream = "0.1"
 tokio-util = "0.7"
+toml = "0.8"
 url = "2"
 uuid = "1"
 walkdir = "2"
+
+[workspace.dependencies.axum-unix]
+version = "0.1"
+git = "https://git.aurora.aur/genya/axum-unix.git"

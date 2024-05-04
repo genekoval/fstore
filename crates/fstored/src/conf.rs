@@ -2,7 +2,6 @@ use axum_unix::Endpoint;
 use fstore_core::DatabaseConfig;
 use log::LevelFilter;
 use serde::{Deserialize, Serialize};
-use serde_yaml as yaml;
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -59,9 +58,9 @@ pub fn read(path: &Path) -> Result<Config, String> {
         format!("Failed to read config file '{}': {err}", path.display())
     })?;
 
-    yaml::from_str(&data).map_err(|err| {
+    toml::from_str(&data).map_err(|err| {
         format!(
-            "Failed to deserialize YAML config file '{}': {err}",
+            "Failed to deserialize TOML config file '{}': {err}",
             path.canonicalize()
                 .ok()
                 .as_deref()
