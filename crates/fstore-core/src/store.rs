@@ -13,7 +13,6 @@ use futures::stream::StreamExt;
 use log::{error, info, trace};
 use pgtools::{PgDump, PgRestore, Psql};
 use serde::{Deserialize, Serialize};
-use sqlx::postgres::PgPoolOptions;
 use std::{
     future::Future,
     path::{Path, PathBuf},
@@ -39,7 +38,8 @@ const DEFAULT_SQL_DIRECTORY: &str =
 pub struct DatabaseConfig {
     pub connection: DbConnection,
 
-    pub max_connections: Option<u32>,
+    #[serde(default = "DatabaseConfig::default_max_connections")]
+    pub max_connections: u32,
 
     #[serde(default)]
     pub psql: Psql,
@@ -55,6 +55,10 @@ pub struct DatabaseConfig {
 }
 
 impl DatabaseConfig {
+    fn default_max_connections() -> u32 {
+        10
+    }
+
     fn default_sql_directory() -> PathBuf {
         DEFAULT_SQL_DIRECTORY.into()
     }
@@ -136,43 +140,28 @@ pub struct ObjectStore {
 
 impl ObjectStore {
     pub async fn new(
-        StoreOptions {
-            version,
-            database,
-            home,
-            archive,
-        }: StoreOptions<'_>,
+        options: StoreOptions<'_>,
     ) -> result::Result<Self, String> {
-        let mut pool = PgPoolOptions::new();
-
-        if let Some(max_connections) = database.max_connections {
-            pool = pool.max_connections(max_connections);
-        }
-
-        let pool = pool
-            .connect(database.connection.as_url().as_str())
-            .await
-            .map_err(|err| {
-                format!("failed to establish database connection: {err}")
-            })?;
-
+        let database = Database::from_config(options.database).await?;
         let db_support = DbSupport::new(
-            version.number,
+            options.version.number,
             pgtools::Options {
-                connection: &database.connection,
-                psql: &database.psql,
-                pg_dump: &database.pg_dump,
-                pg_restore: &database.pg_restore,
-                sql_directory: &database.sql_directory,
+                connection: &options.database.connection,
+                psql: &options.database.psql,
+                pg_dump: &options.database.pg_dump,
+                pg_restore: &options.database.pg_restore,
+                sql_directory: &options.database.sql_directory,
             },
         )?;
 
         Ok(Self {
-            about: About { version },
-            database: Database::new(pool),
+            about: About {
+                version: options.version,
+            },
+            database,
             db_support,
-            filesystem: Filesystem::new(home),
-            archive: archive.clone(),
+            filesystem: Filesystem::new(options.home),
+            archive: options.archive.clone(),
             tasks: Default::default(),
         })
     }

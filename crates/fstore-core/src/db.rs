@@ -2,6 +2,16 @@ mod model;
 
 pub use model::*;
 
+use crate::DatabaseConfig;
+
+use core::time::Duration;
+use log::LevelFilter;
+use sqlx::{
+    postgres::{
+        PgConnectOptions as ConnectOptions, PgPoolOptions as PoolOptions,
+    },
+    ConnectOptions as _,
+};
 use sqlx_helper_macros::{database, transaction};
 use uuid::Uuid;
 
@@ -48,4 +58,26 @@ database! {
 
 transaction! {
     remove_orphan_objects() -> Vec<Object>;
+}
+
+impl Database {
+    pub async fn from_config(config: &DatabaseConfig) -> Result<Self, String> {
+        let url = config.connection.as_url();
+
+        let options = ConnectOptions::from_url(&url)
+            .map_err(|err| {
+                format!("failed to create database connect options: {err}")
+            })?
+            .log_slow_statements(LevelFilter::Debug, Duration::from_secs(30));
+
+        let pool = PoolOptions::new()
+            .max_connections(config.max_connections)
+            .connect_with(options)
+            .await
+            .map_err(|err| {
+                format!("failed to establish database connection: {err}")
+            })?;
+
+        Ok(Self::new(pool))
+    }
 }
