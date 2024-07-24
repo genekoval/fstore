@@ -1,6 +1,6 @@
 [package]
 name = "fstored"
-version.workspace = true
+version = "0.5.0"
 edition.workspace = true
 build = "build.rs"
 
