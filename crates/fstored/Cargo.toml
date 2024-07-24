@@ -15,7 +15,7 @@ clap = { workspace = true, features = ["derive", "env"] }
 crossterm = { workspace = true }
 dmon = { workspace = true }
 log = { workspace = true, features = ["serde"] }
-mime = "0.3"
+mime = { workspace = true }
 ratatui = { workspace = true }
 serde = { workspace = true }
 shadow-rs = { workspace = true }
