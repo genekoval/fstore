@@ -1,10 +1,17 @@
 use chrono::{DateTime, Local};
-use sqlx::postgres::{PgHasArrayType, PgTypeInfo};
+use sqlx::{
+    encode::IsNull,
+    error::BoxDynError,
+    postgres::{
+        types::PgRecordEncoder, PgArgumentBuffer, PgHasArrayType, PgTypeInfo,
+    },
+    Encode, FromRow, Postgres, Type,
+};
 use uuid::Uuid;
 
 pub type Timestamp = DateTime<Local>;
 
-#[derive(Debug, sqlx::FromRow)]
+#[derive(Debug, FromRow)]
 pub struct Bucket {
     pub bucket_id: Uuid,
     pub name: String,
@@ -25,7 +32,7 @@ impl From<Bucket> for fstore::Bucket {
     }
 }
 
-#[derive(Debug, sqlx::FromRow)]
+#[derive(Debug, FromRow)]
 pub struct Object {
     pub object_id: Uuid,
     pub hash: String,
@@ -48,7 +55,7 @@ impl From<Object> for fstore::Object {
     }
 }
 
-#[derive(Debug, sqlx::FromRow)]
+#[derive(Debug, FromRow)]
 pub struct RemoveResult {
     pub objects_removed: i64,
     pub space_freed: i64,
@@ -63,7 +70,7 @@ impl From<RemoveResult> for fstore::RemoveResult {
     }
 }
 
-#[derive(Debug, sqlx::FromRow)]
+#[derive(Debug, FromRow)]
 pub struct StoreTotals {
     pub buckets: i64,
     pub objects: i64,
@@ -80,11 +87,32 @@ impl From<StoreTotals> for fstore::StoreTotals {
     }
 }
 
-#[derive(Debug, sqlx::FromRow, sqlx::Type)]
+#[derive(Debug, FromRow)]
 #[sqlx(type_name = "object_error")]
 pub struct ObjectError {
     pub object_id: Uuid,
     pub message: String,
+}
+
+impl Encode<'_, Postgres> for ObjectError {
+    fn encode_by_ref(
+        &self,
+        buf: &mut PgArgumentBuffer,
+    ) -> Result<IsNull, BoxDynError> {
+        let mut encoder = PgRecordEncoder::new(buf);
+
+        encoder.encode(self.object_id)?;
+        encoder.encode(&self.message)?;
+
+        encoder.finish();
+        Ok(IsNull::No)
+    }
+}
+
+impl Type<Postgres> for ObjectError {
+    fn type_info() -> PgTypeInfo {
+        PgTypeInfo::with_name("object_error")
+    }
 }
 
 impl PgHasArrayType for ObjectError {
