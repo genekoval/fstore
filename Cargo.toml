@@ -8,6 +8,7 @@ edition = "2021"
 [workspace.dependencies]
 axum = "0.7"
 axum-extra = "0.9"
+axum-unix = { version = "0.2", registry = "genya" }
 base16ct = "0.2"
 bytes = "1"
 bytesize = "1"
@@ -44,7 +45,3 @@ toml = "0.8"
 url = "2"
 uuid = "1"
 walkdir = "2"
-
-[workspace.dependencies.axum-unix]
-version = "0.1"
-git = "https://git.aurora.aur/genya/axum-unix.git"

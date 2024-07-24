@@ -228,8 +228,9 @@ dependencies = [
 
 [[package]]
 name = "axum-unix"
-version = "0.1.0"
-source = "git+https://git.aurora.aur/genya/axum-unix.git#cb60b9c33897ca4ce2c3354379c77095c167b333"
+version = "0.2.0"
+source = "sparse+https://git.aurora.aur/api/packages/genya/cargo/"
+checksum = "5c990770e220c8344d72075d6a2a8fcbf450d00b128992c1d91dae4eb98c5c79"
 dependencies = [
  "axum",
  "futures-util",
@@ -237,7 +238,7 @@ dependencies = [
  "hyper-util",
  "libc",
  "log",
- "nix",
+ "nix 0.29.0",
  "serde",
  "tokio",
  "tokio-util",
@@ -404,6 +405,12 @@ name = "cfg_aliases"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fd16c4719339c4530435d38e511904438d07cce7950afa3718a84ac36c10e89e"
+
+[[package]]
+name = "cfg_aliases"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 
 [[package]]
 name = "chrono"
@@ -668,7 +675,7 @@ version = "0.1.0"
 source = "sparse+https://git.aurora.aur/api/packages/genya/cargo/"
 checksum = "2158d7f0b0610b63a2a2ad0cbb86696cb03f9c0d3cbaa7ff6d153151bd1934ae"
 dependencies = [
- "nix",
+ "nix 0.28.0",
 ]
 
 [[package]]
@@ -1383,7 +1390,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4979f22fdb869068da03c9f7528f8297c6fd2606bc3a4affe42e6a823fdb8da4"
 dependencies = [
  "cfg-if",
- "windows-targets 0.52.6",
+ "windows-targets 0.48.5",
 ]
 
 [[package]]
@@ -1563,7 +1570,19 @@ checksum = "ab2156c4fce2f8df6c499cc1c763e4394b7482525bf2a9701c9d79d215f519e4"
 dependencies = [
  "bitflags 2.6.0",
  "cfg-if",
- "cfg_aliases",
+ "cfg_aliases 0.1.1",
+ "libc",
+]
+
+[[package]]
+name = "nix"
+version = "0.29.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "71e2746dc3a24dd78b3cfcb7be93368c6de9963d30f43a6a73998a9cf4b17b46"
+dependencies = [
+ "bitflags 2.6.0",
+ "cfg-if",
+ "cfg_aliases 0.2.1",
  "libc",
 ]
 
