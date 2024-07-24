@@ -3,6 +3,7 @@ use ratatui::{
     prelude::*,
     style::palette::tailwind,
     widgets::{block::Title, Block, Borders, Gauge},
+    TerminalOptions, Viewport,
 };
 use std::io::{self, Stdout};
 use tokio::{

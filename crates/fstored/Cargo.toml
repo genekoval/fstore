@@ -16,7 +16,7 @@ crossterm = { workspace = true }
 dmon = { workspace = true }
 log = { workspace = true, features = ["serde"] }
 mime = "0.3"
-ratatui = "0.26"
+ratatui = { workspace = true }
 serde = { workspace = true }
 shadow-rs = { workspace = true }
 sqlx = { workspace = true, features = ["postgres"] }
