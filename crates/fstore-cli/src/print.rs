@@ -162,7 +162,14 @@ impl Tabulate for Vec<Object> {
     fn tabulate(self) -> Table {
         let mut builder = Builder::default();
 
-        builder.push_record(["ID", "SHA 256", "Size", "Type", "Added"]);
+        builder.push_record([
+            "ID",
+            "SHA 256",
+            "Size",
+            "Type",
+            "Extension",
+            "Added",
+        ]);
 
         for object in self {
             let media_type = object.media_type();
@@ -172,6 +179,7 @@ impl Tabulate for Vec<Object> {
                 object.hash,
                 bytesize::to_string(object.size, true),
                 media_type,
+                object.extension.unwrap_or_else(|| "?".into()),
                 object.added.to_string(),
             ]);
         }

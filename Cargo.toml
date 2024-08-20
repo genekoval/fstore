@@ -23,6 +23,7 @@ libc = "0.2"
 log = "0.4"
 magic = "0.16"
 mime = "0.3"
+mime2ext = "0.1"
 num_cpus = "1"
 num-format = "0.4"
 pgtools = { version = "0.1", registry = "genya" }

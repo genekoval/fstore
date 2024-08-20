@@ -39,6 +39,7 @@ pub struct Object {
     pub size: u64,
     pub r#type: String,
     pub subtype: String,
+    pub extension: Option<String>,
     pub added: DateTime,
 }
 

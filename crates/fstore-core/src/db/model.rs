@@ -1,4 +1,5 @@
 use chrono::{DateTime, Local};
+use mime2ext::mime2ext;
 use sqlx::{
     encode::IsNull,
     error::BoxDynError,
@@ -44,12 +45,16 @@ pub struct Object {
 
 impl From<Object> for fstore::Object {
     fn from(value: Object) -> Self {
+        let mime = format!("{}/{}", value.r#type, value.subtype);
+        let extension = mime2ext(&mime).map(str::to_string);
+
         fstore::Object {
             id: value.object_id,
             hash: value.hash,
             size: value.size.try_into().unwrap(),
             r#type: value.r#type,
             subtype: value.subtype,
+            extension,
             added: value.date_added,
         }
     }

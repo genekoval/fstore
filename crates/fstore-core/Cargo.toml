@@ -11,6 +11,7 @@ futures = { workspace = true }
 libc = { workspace = true }
 log = { workspace = true }
 magic = { workspace = true }
+mime2ext = { workspace = true }
 num_cpus = { workspace = true }
 pgtools = { workspace = true }
 sha2 = { workspace = true }
