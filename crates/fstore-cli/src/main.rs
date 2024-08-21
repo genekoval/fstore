@@ -11,7 +11,7 @@ use fstore::Uuid;
 use std::{path::PathBuf, process::ExitCode, result};
 
 #[derive(Debug, Parser)]
-#[command(version, arg_required_else_help = true)]
+#[command(name = "fstore", version, arg_required_else_help = true)]
 /// Command-line client for fstore servers
 pub struct Cli {
     #[arg(
