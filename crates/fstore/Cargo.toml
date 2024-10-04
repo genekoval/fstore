@@ -10,9 +10,14 @@ serde = { workspace = true, features = ["derive"] }
 thiserror = { workspace = true }
 uuid = { workspace = true, features = ["serde"] }
 
+# axum dependencies
+axum = { workspace = true, optional = true }
+axum-extra = { workspace = true, optional = true }
+
 # HTTP dependencies
 bytes = { workspace = true, optional = true }
 futures-core = { workspace = true, optional = true }
+headers = { workspace = true, optional = true }
 mime = { workspace = true, optional = true }
 reqwest = { workspace = true, features = ["json", "stream"], optional = true }
 tokio = { workspace = true, optional = true }
@@ -21,9 +26,11 @@ tokio-util = { workspace = true, optional = true }
 url = { workspace = true, features = ["serde"], optional = true }
 
 [features]
+axum = ["http", "dep:axum", "axum-extra/async-read-body", "tokio-util/io"]
 http = [
     "dep:bytes",
     "dep:futures-core",
+    "dep:headers",
     "dep:mime",
     "dep:reqwest",
     "dep:tokio",

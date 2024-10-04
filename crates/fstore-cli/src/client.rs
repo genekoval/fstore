@@ -102,7 +102,7 @@ impl Client {
         object: Uuid,
         destination: Option<PathBuf>,
     ) -> Result {
-        let (_, stream) = self.client.get_object_stream(bucket, object).await?;
+        let stream = self.client.get_object_stream(bucket, object).await?;
         let mut reader = StreamReader::new(stream);
 
         match destination {

@@ -6,10 +6,8 @@ build = "build.rs"
 
 [dependencies]
 axum = { workspace = true }
-axum-extra = { workspace = true, features = [
-    "async-read-body",
-    "typed-header",
-] }
+axum-extra = { workspace = true, features = ["typed-header"] }
+axum-range = { workspace = true }
 axum-unix = { workspace = true, features = ["serde"] }
 clap = { workspace = true, features = ["derive", "env"] }
 crossterm = { workspace = true }

@@ -8,6 +8,7 @@ edition = "2021"
 [workspace.dependencies]
 axum = "0.7"
 axum-extra = "0.9"
+axum-range = "0.4"
 axum-unix = { version = "0.2", registry = "genya" }
 base16ct = "0.2"
 bytes = "1"
@@ -19,6 +20,7 @@ crossterm = "0.28"
 dmon = { version = "0.1", registry = "genya" }
 futures = "0.3"
 futures-core = "0.3"
+headers = "0.4"
 libc = "0.2"
 log = "0.4"
 magic = "0.16"

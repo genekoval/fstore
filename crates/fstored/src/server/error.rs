@@ -2,14 +2,24 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+use axum_range::RangeNotSatisfiable;
 use log::error;
 use sqlx::error::Error as SqlError;
 
-pub struct Error(fstore_core::Error);
+pub enum Error {
+    Core(fstore_core::Error),
+    RangeNotSatisfiable(RangeNotSatisfiable),
+}
 
 impl From<fstore_core::Error> for Error {
     fn from(value: fstore_core::Error) -> Self {
-        Self(value)
+        Self::Core(value)
+    }
+}
+
+impl From<RangeNotSatisfiable> for Error {
+    fn from(value: RangeNotSatisfiable) -> Self {
+        Self::RangeNotSatisfiable(value)
     }
 }
 
@@ -17,21 +27,24 @@ impl IntoResponse for Error {
     fn into_response(self) -> Response {
         use fstore_core::Error::*;
 
-        let error = self.0;
-
-        match &error {
-            Sql(sql) => match sql {
-                SqlError::RowNotFound => {
-                    return (StatusCode::NOT_FOUND, "Not found").into_response()
+        if let Self::Core(error) = &self {
+            match error {
+                Sql(sql) => match sql {
+                    SqlError::RowNotFound => {
+                        return (StatusCode::NOT_FOUND, "Not found")
+                            .into_response()
+                    }
+                    error => error!("{error}: {sql}"),
+                },
+                NotFound(_) => {
+                    return (StatusCode::NOT_FOUND, format!("{error}"))
+                        .into_response()
                 }
-                _ => error!("{error}: {sql}"),
-            },
-            NotFound(_) => {
-                return (StatusCode::NOT_FOUND, format!("{error}"))
-                    .into_response()
+                _ => error!("{error}"),
             }
-            _ => error!("{error}"),
-        };
+        } else if let Self::RangeNotSatisfiable(error) = self {
+            return error.into_response();
+        }
 
         (StatusCode::INTERNAL_SERVER_ERROR, "Something went wrong")
             .into_response()

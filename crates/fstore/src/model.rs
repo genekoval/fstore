@@ -49,12 +49,6 @@ impl Object {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct ObjectSummary {
-    pub media_type: String,
-    pub size: u64,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ObjectError {
     pub object_id: Uuid,

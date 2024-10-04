@@ -1,20 +1,52 @@
+#[cfg(feature = "axum")]
+mod axum;
+
 use crate::{
     error::{Error, ErrorKind, Result},
-    model, About, Object, ObjectError, ObjectSummary, RemoveResult,
-    StoreTotals,
+    model, About, Object, ObjectError, RemoveResult, StoreTotals,
 };
+
+pub use headers::Range;
 
 use bytes::Bytes;
 use futures_core::{Stream, TryStream};
+use headers::HeaderMapExt;
 use mime::{Mime, TEXT_PLAIN_UTF_8};
 use reqwest::{
-    header::CONTENT_TYPE, Body, RequestBuilder, Response, StatusCode, Url,
+    header::{HeaderMap, CONTENT_TYPE},
+    Body, Method, RequestBuilder, Response, StatusCode, Url,
 };
-use std::{error, fmt::Write};
+use std::{
+    error,
+    fmt::{self, Display, Write},
+    ops::{Bound, RangeBounds},
+};
 use tokio::io::AsyncRead;
 use tokio_stream::StreamExt;
 use tokio_util::io::ReaderStream;
 use uuid::Uuid;
+
+#[derive(Clone, Copy, Debug)]
+pub enum ProxyMethod {
+    Get,
+    Head,
+}
+
+impl Display for ProxyMethod {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Get => f.write_str("GET"),
+            Self::Head => f.write_str("HEAD"),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct ProxyResponse<S> {
+    pub status: StatusCode,
+    pub headers: HeaderMap,
+    pub stream: S,
+}
 
 impl From<reqwest::Error> for Error {
     fn from(error: reqwest::Error) -> Self {
@@ -246,68 +278,78 @@ impl Client {
         &self,
         bucket: Uuid,
         object: Uuid,
-    ) -> Result<(ObjectSummary, Response)> {
-        let response = self
-            .client
-            .get(self.path(&[
-                "object",
-                &bucket.to_string(),
-                &object.to_string(),
-                "data",
-            ]))
-            .send_and_check()
-            .await?;
+        bounds: Option<(Bound<&u64>, Bound<&u64>)>,
+    ) -> Result<Response> {
+        let mut builder = self.client.get(self.path(&[
+            "object",
+            &bucket.to_string(),
+            &object.to_string(),
+            "data",
+        ]));
 
-        let content_length: u64 = response
-            .headers()
-            .get("content-length")
-            .expect("server response should contain a content-length header")
-            .to_str()
-            .expect("content-length header value should be valid ASCII")
-            .parse()
-            .expect("content-length header value should be a valid number");
+        if let Some(bounds) = bounds {
+            let range = Range::bytes(bounds)
+                .map_err(|err| Error::other(err.to_string()))?;
 
-        let content_type: String = response
-            .headers()
-            .get("content-type")
-            .expect("cerver response should contain a content-type header")
-            .to_str()
-            .expect("content-type header value should be valid ASCII")
-            .into();
+            let mut headers = HeaderMap::new();
+            headers.typed_insert(range);
 
-        let summary = ObjectSummary {
-            media_type: content_type,
-            size: content_length,
-        };
+            builder = builder.headers(headers);
+        }
 
-        Ok((summary, response))
+        builder.send_and_check().await
     }
 
     pub async fn get_object_bytes(
         &self,
         bucket: Uuid,
         object: Uuid,
-    ) -> Result<(ObjectSummary, Bytes)> {
-        let (summary, response) = self.get_object_data(bucket, object).await?;
+    ) -> Result<Bytes> {
+        Ok(self
+            .get_object_data(bucket, object, None)
+            .await?
+            .bytes()
+            .await?)
+    }
 
-        let bytes = response.bytes().await?;
-
-        Ok((summary, bytes))
+    pub async fn get_object_bytes_range(
+        &self,
+        bucket: Uuid,
+        object: Uuid,
+        range: impl RangeBounds<u64>,
+    ) -> Result<Bytes> {
+        let range = Some((range.start_bound(), range.end_bound()));
+        Ok(self
+            .get_object_data(bucket, object, range)
+            .await?
+            .bytes()
+            .await?)
     }
 
     pub async fn get_object_stream(
         &self,
         bucket: Uuid,
         object: Uuid,
-    ) -> Result<(ObjectSummary, impl Stream<Item = std::io::Result<Bytes>>)>
-    {
-        let (summary, response) = self.get_object_data(bucket, object).await?;
-
-        let stream = response
+    ) -> Result<impl Stream<Item = std::io::Result<Bytes>>> {
+        Ok(self
+            .get_object_data(bucket, object, None)
+            .await?
             .bytes_stream()
-            .map(|result| result.map_err(std::io::Error::other));
+            .map(|result| result.map_err(std::io::Error::other)))
+    }
 
-        Ok((summary, stream))
+    pub async fn get_object_stream_range(
+        &self,
+        bucket: Uuid,
+        object: Uuid,
+        range: impl RangeBounds<u64>,
+    ) -> Result<impl Stream<Item = std::io::Result<Bytes>>> {
+        let range = Some((range.start_bound(), range.end_bound()));
+        Ok(self
+            .get_object_data(bucket, object, range)
+            .await?
+            .bytes_stream()
+            .map(|result| result.map_err(std::io::Error::other)))
     }
 
     pub async fn get_object_errors(&self) -> Result<Vec<ObjectError>> {
@@ -328,6 +370,65 @@ impl Client {
         let mut url = self.url.clone();
         url.path_segments_mut().unwrap().extend(segments);
         url
+    }
+
+    pub async fn proxy(
+        &self,
+        bucket: Uuid,
+        object: Uuid,
+        method: ProxyMethod,
+        range: Option<Range>,
+    ) -> reqwest::Result<
+        ProxyResponse<impl Stream<Item = std::io::Result<Bytes>>>,
+    > {
+        let method = match method {
+            ProxyMethod::Get => Method::GET,
+            ProxyMethod::Head => Method::HEAD,
+        };
+
+        let url = self.path(&[
+            "object",
+            &bucket.to_string(),
+            &object.to_string(),
+            "data",
+        ]);
+
+        let mut headers = HeaderMap::new();
+
+        if let Some(range) = range {
+            headers.typed_insert(range);
+        }
+
+        let response = self
+            .client
+            .request(method, url)
+            .headers(headers)
+            .send()
+            .await?;
+
+        let status = response.status();
+        let mut headers = HeaderMap::new();
+
+        for name in [
+            "accept-ranges",
+            "content-length",
+            "content-range",
+            "content-type",
+        ] {
+            if let Some(value) = response.headers().get(name) {
+                headers.insert(name, value.clone());
+            }
+        }
+
+        let stream = response
+            .bytes_stream()
+            .map(|result| result.map_err(std::io::Error::other));
+
+        Ok(ProxyResponse {
+            status,
+            headers,
+            stream,
+        })
     }
 
     pub async fn prune(&self) -> Result<Vec<Object>> {
@@ -472,19 +573,44 @@ impl Bucket {
         self.client.get_objects(self.id, objects).await
     }
 
-    pub async fn get_object_bytes(
+    pub async fn get_object_bytes(&self, id: Uuid) -> Result<Bytes> {
+        self.client.get_object_bytes(self.id, id).await
+    }
+
+    pub async fn get_object_bytes_range(
         &self,
         id: Uuid,
-    ) -> Result<(ObjectSummary, Bytes)> {
-        self.client.get_object_bytes(self.id, id).await
+        range: impl RangeBounds<u64>,
+    ) -> Result<Bytes> {
+        self.client.get_object_bytes_range(self.id, id, range).await
     }
 
     pub async fn get_object_stream(
         &self,
         id: Uuid,
-    ) -> Result<(ObjectSummary, impl Stream<Item = std::io::Result<Bytes>>)>
-    {
+    ) -> Result<impl Stream<Item = std::io::Result<Bytes>>> {
         self.client.get_object_stream(self.id, id).await
+    }
+
+    pub async fn get_object_stream_range(
+        &self,
+        id: Uuid,
+        range: impl RangeBounds<u64>,
+    ) -> Result<impl Stream<Item = std::io::Result<Bytes>>> {
+        self.client
+            .get_object_stream_range(self.id, id, range)
+            .await
+    }
+
+    pub async fn proxy(
+        &self,
+        object: Uuid,
+        method: ProxyMethod,
+        range: Option<Range>,
+    ) -> reqwest::Result<
+        ProxyResponse<impl Stream<Item = std::io::Result<Bytes>>>,
+    > {
+        self.client.proxy(self.id, object, method, range).await
     }
 
     pub async fn remove_object(&self, id: Uuid) -> Result<Object> {

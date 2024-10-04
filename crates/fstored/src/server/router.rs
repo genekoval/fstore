@@ -5,15 +5,16 @@ use axum::{
     async_trait,
     body::Bytes,
     extract::{rejection::BytesRejection, FromRequest, Path, Request, State},
-    http::{
-        header::{CONTENT_LENGTH, CONTENT_TYPE},
-        StatusCode,
-    },
+    http::{header::CONTENT_TYPE, StatusCode},
     response::{IntoResponse, Response},
     routing::{delete, get, post, put},
     Json, Router,
 };
-use axum_extra::{body::AsyncReadBody, headers::ContentLength, TypedHeader};
+use axum_extra::{
+    headers::{AcceptRanges, ContentLength, ContentType, Range},
+    TypedHeader,
+};
+use axum_range::{KnownSize, Ranged, RangedResponse};
 use fstore::{Bucket, Object, ObjectError, RemoveResult, StoreTotals};
 use fstore_core::About;
 use mime::Mime;
@@ -216,17 +217,42 @@ async fn get_buckets(
 async fn get_object_data(
     State(AppState { store }): State<AppState>,
     Path((bucket, object)): Path<(Uuid, Uuid)>,
+    range: Option<TypedHeader<Range>>,
 ) -> Result<Response> {
     let object = store.get_object_metadata(bucket, object).await?;
     let file = store.get_object(&object.id).await?;
 
-    let headers = [
-        (CONTENT_LENGTH, object.size.to_string()),
-        (CONTENT_TYPE, object.media_type()),
-    ];
-    let body = AsyncReadBody::new(file);
+    let range = range.map(|TypedHeader(range)| range);
+    let body = KnownSize::sized(file, object.size);
 
-    Ok((headers, body).into_response())
+    let RangedResponse {
+        content_range,
+        content_length,
+        stream,
+    } = Ranged::new(range, body).try_respond()?;
+
+    let accept_ranges = TypedHeader(AcceptRanges::bytes());
+    let content_length = TypedHeader(content_length);
+    let content_range = content_range.map(TypedHeader);
+    let content_type =
+        TypedHeader(object.media_type().parse::<ContentType>().unwrap());
+
+    let status = if content_range.is_some() {
+        StatusCode::PARTIAL_CONTENT
+    } else {
+        StatusCode::OK
+    };
+
+    let response = (
+        status,
+        accept_ranges,
+        content_type,
+        content_length,
+        content_range,
+        stream,
+    );
+
+    Ok(response.into_response())
 }
 
 async fn get_object_errors(

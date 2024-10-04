@@ -227,6 +227,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "axum-range"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1c30398a7f716ebdd7f3c8a4f7a7a6df48a30e002007fd57b2a7a00fac864bd"
+dependencies = [
+ "axum",
+ "axum-extra",
+ "bytes",
+ "futures",
+ "http-body",
+ "pin-project",
+ "tokio",
+]
+
+[[package]]
 name = "axum-unix"
 version = "0.2.0"
 source = "sparse+https://git.aurora.aur/api/packages/genya/cargo/"
@@ -787,9 +802,12 @@ dependencies = [
 name = "fstore"
 version = "0.4.2"
 dependencies = [
+ "axum",
+ "axum-extra",
  "bytes",
  "chrono",
  "futures-core",
+ "headers",
  "log",
  "mime",
  "reqwest",
@@ -854,6 +872,7 @@ version = "0.5.1"
 dependencies = [
  "axum",
  "axum-extra",
+ "axum-range",
  "axum-unix",
  "clap",
  "crossterm",
