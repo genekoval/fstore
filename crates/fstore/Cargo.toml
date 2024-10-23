@@ -3,6 +3,7 @@ name = "fstore"
 version = "0.4.2"
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
 
 [dependencies]
 chrono = { workspace = true, features = ["serde"] }

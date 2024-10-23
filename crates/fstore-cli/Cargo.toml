@@ -3,6 +3,7 @@ name = "fstore-cli"
 version = "0.2.1"
 edition.workspace = true
 license.workspace = true
+repository.workspace = true
 
 [dependencies]
 bytesize = { workspace = true }
