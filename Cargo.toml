@@ -4,6 +4,7 @@ members = ["crates/*"]
 
 [workspace.package]
 edition = "2021"
+license = "AGPL-3.0"
 
 [workspace.dependencies]
 axum = "0.7"

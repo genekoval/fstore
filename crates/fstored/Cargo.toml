@@ -2,6 +2,7 @@
 name = "fstored"
 version = "0.5.1"
 edition.workspace = true
+license.workspace = true
 build = "build.rs"
 
 [dependencies]
